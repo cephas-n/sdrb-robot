@@ -15,8 +15,11 @@
 // Estimated amount of time (in milliseconds) require to steer the wheels by 90deg or -90deg
 const unsigned STEERING_DURATION = 1000;
 
+// Estimated amount of time (in milliseconds) require to steer the wheels by 90deg or -90deg
+const unsigned STEERING_SPEED = 200;
+
 // Time interval (in milliseconds) in which the robot will move forward, then stops
-const int FORWARD_DURATION = 1000;
+const int FORWARD_DURATION = 500;
 
 // compass heading correction/tolerance (degrees)
 const int DIRECTION_CORRECTION = 10;

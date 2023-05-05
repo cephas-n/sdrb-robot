@@ -708,24 +708,18 @@ bool obstacle_avoidance()
       turn_right();
       while (true) {
         // advance
-        forward(150, 1000);
-
+        forward(150);
         if (digitalRead(Pin::RIGHT_TRIG) == HIGH) break;
         Avoidance::duration++;
       }
 
       Serial.println("the Robot can turn left now ============");
-
       stop_forward_motors();
-
       turn_left();
-
-      forward(MOTOR_SPEED, 1000);
-      stop_forward_motors();
+      forward(MOTOR_SPEED, 1.5 * FORWARD_DURATION);
 
       while (true) {
-        forward(150, 1000);
-
+        forward(150, FORWARD_DURATION);
         if (digitalRead(Pin::RIGHT_TRIG) == HIGH) break;
       }
 
@@ -733,7 +727,7 @@ bool obstacle_avoidance()
       turn_left();
 
       while (Avoidance::duration > 0) {
-        forward(150, 1000);
+        forward(150, FORWARD_DURATION);
         Avoidance::duration--;
       }
 
@@ -745,8 +739,7 @@ bool obstacle_avoidance()
       turn_left();
       while (true) {
         // advance
-        forward(150, 1000);
-
+        forward(150, FORWARD_DURATION);
         if (digitalRead(Pin::LEFT_TRIG) == HIGH) break;
         Avoidance::duration++;
       }
@@ -754,15 +747,11 @@ bool obstacle_avoidance()
       Serial.println("the Robot can turn right now ============");
 
       stop_forward_motors();
-
       turn_right();
-
-      forward(MOTOR_SPEED);
-      stop_forward_motors();
+      forward(MOTOR_SPEED, 1.5 * FORWARD_DURATION);
 
       while (true) {
-        forward(150);
-
+        forward(150, FORWARD_DURATION);
         if (digitalRead(Pin::LEFT_TRIG) == HIGH) break;
       }
 
@@ -770,7 +759,7 @@ bool obstacle_avoidance()
       turn_right();
 
       while (Avoidance::duration > 0) {
-        forward(150);
+        forward(150, FORWARD_DURATION);
         Avoidance::duration--;
       }
 
