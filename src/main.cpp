@@ -213,11 +213,15 @@ class MotorController {
     MotorController *turn_left() {
       driver_left->stop();
       driver_right->forward();
+
+      return this;
     }
 
-     MotorController *turn_right() {
+    MotorController *turn_right() {
       driver_left->forward();
       driver_right->stop();
+
+      return this;
     }
 
     MotorController *set_speed(uint8_t speed) {
@@ -226,6 +230,20 @@ class MotorController {
 
       return this;
     }
+
+    void *stop_after(uint32_t time) {
+      delay(time);
+      driver_left->stop();
+      driver_right->stop();
+    }
+
+    void *stop_when(bool (*callback)()) {
+      if(callback()) {
+        driver_left->stop();
+        driver_right->stop();
+      }
+    }
+
 
     void stop() {
       driver_left->stop();
@@ -1046,10 +1064,10 @@ delay(2000);
 motor_controller->set_speed(150);
 
 delay(2000);
-motor_controller->turn_left();
+motor_controller->turn_left()->stop_after(1000);
 
 
-delay(2000);
+delay(5000);
 motor_controller->turn_right();
 
 delay(2000);
