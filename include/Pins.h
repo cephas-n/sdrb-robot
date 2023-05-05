@@ -4,27 +4,27 @@
 //########### PINS DEFINITION ##############
 namespace Pin
 {
-    const int START_BUTTON = 22;
-    const int STOP_BUTTON = 2;
-    const int FRONT_IR = 38;
-    const int RIGHT_TRIG = 49;
-    const int RIGHT_ECHO = A2;
-    const int LEFT_TRIG = 26;
-    const int LEFT_ECHO = A1;
-    const int RPWM_1 = 4;       //left
-    const int LPWM_1 = 5;
-    const int REN_1 = 8;
-    const int RPWM_2 = 6;       //right
-    const int LPWM_2 = 7;
-    const int REN_2 = 9;
-    const int BUZZER = 36;
-    const int GPS_TX = 11;
-    const int GPS_RX = 10;
-    const int SD_CARD = 53; // CS pin (clock)
-    const int LEFT_LED = 30;
-    const int RIGHT_LED = 32;
-    const int STOP_LED = 34;
-    const int ACTIVE_LED = 40;
+    const uint8_t START_BUTTON = 22;
+    const uint8_t STOP_BUTTON = 2;
+    const uint8_t FRONT_IR = 38;
+    const uint8_t RIGHT_TRIG = 49;
+    const uint8_t RIGHT_ECHO = A2;
+    const uint8_t LEFT_TRIG = 26;
+    const uint8_t LEFT_ECHO = A1;
+    const uint8_t RPWM_1 = 4;       //left
+    const uint8_t LPWM_1 = 5;
+    const uint8_t REN_1 = 8;
+    const uint8_t RPWM_2 = 6;       //right
+    const uint8_t LPWM_2 = 7;
+    const uint8_t REN_2 = 9;
+    const uint8_t BUZZER = 36;
+    const uint8_t GPS_TX = 11;
+    const uint8_t GPS_RX = 10;
+    const uint8_t SD_CARD = 53; // CS pin (clock)
+    const uint8_t LEFT_LED = 30;
+    const uint8_t RIGHT_LED = 32;
+    const uint8_t STOP_LED = 34;
+    const uint8_t ACTIVE_LED = 40;
 };
 //########### END PINS DEFINITION ##############
 #endif

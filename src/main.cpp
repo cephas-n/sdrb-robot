@@ -94,7 +94,146 @@ QMC5883LCompass compass;
 //########### END LIBRARY INSTANCES ##############
 
 
+//Motor Class
+class Motor {
+  protected:
+    uint8_t positive_pin;
+    uint8_t negative_pin;
+    int state;
+  public:
+    Motor() = default;
+    virtual ~Motor() = default;
 
+    virtual void mount(
+      const uint8_t positive_pin, 
+      const uint8_t negative_pin, 
+      const uint8_t en_pin) = 0;
+
+    Motor *forward() {
+      this->state = HIGH;
+      digitalWrite(this->positive_pin, HIGH);
+      digitalWrite(this->negative_pin, LOW);
+
+      return this;
+    }
+
+    Motor *reverse() {
+      this->state = HIGH;
+      digitalWrite(this->positive_pin, LOW);
+      digitalWrite(this->negative_pin, HIGH);
+
+      return this;
+    }
+
+    void stop() {
+      this->state = LOW;
+      digitalWrite(this->positive_pin, LOW);
+      digitalWrite(this->negative_pin, LOW);
+    }
+
+    int get_state() {
+      return this->state;
+    }
+
+};
+
+class MotorDriver: public Motor {
+  protected:
+    uint8_t en_pin;
+  public:
+    MotorDriver() = default;
+    ~MotorDriver() = default;
+    void mount(
+      const uint8_t positive_pin, 
+      const uint8_t negative_pin, 
+      const uint8_t en_pin)
+    {
+      // mount motor
+      this->positive_pin = positive_pin;
+      this->negative_pin = negative_pin;
+
+      pinMode(this->positive_pin, OUTPUT);
+      pinMode(this->negative_pin, OUTPUT);
+
+      // mount enable/pwm pin
+      this->en_pin = en_pin;
+      pinMode(en_pin, OUTPUT);
+
+      // set nominal speed
+      digitalWrite(en_pin, MOTOR_SPEED);
+    }
+
+    MotorDriver *set_speed(const uint8_t speed) {
+      analogWrite(this->en_pin, speed);
+
+      return this;
+    }
+};
+
+
+class MotorController {
+  protected:
+    MotorDriver *driver_left = new MotorDriver();
+    MotorDriver *driver_right = new MotorDriver();
+  public:
+    MotorController() = default;
+    ~MotorController() = default;
+    void mount(
+      const uint8_t positive_pin_left, 
+      const uint8_t negative_pin_left, 
+      const uint8_t en_pin_left,
+      const uint8_t positive_pin_right, 
+      const uint8_t negative_pin_right, 
+      const uint8_t en_pin_right
+    ) {
+      driver_left->mount(positive_pin_left, negative_pin_left, en_pin_left);
+      driver_right->mount(positive_pin_right, negative_pin_right, en_pin_right);
+    }
+
+    MotorController *forward() {
+      if(driver_left->get_state() == HIGH) driver_left->stop();
+      if(driver_right->get_state() == HIGH) driver_right->stop();
+
+      driver_left->forward();
+      driver_right->forward();
+
+      return this;
+    }
+
+    MotorController *reverse() {
+      if(driver_left->get_state() == HIGH) driver_left->stop();
+      if(driver_right->get_state() == HIGH) driver_right->stop();
+
+      driver_left->reverse();
+      driver_right->reverse();
+
+      return this;
+    }
+
+    MotorController *turn_left() {
+      driver_left->stop();
+      driver_right->forward();
+    }
+
+     MotorController *turn_right() {
+      driver_left->forward();
+      driver_right->stop();
+    }
+
+    MotorController *set_speed(uint8_t speed) {
+      driver_left->set_speed(speed);
+      driver_right->set_speed(speed);
+
+      return this;
+    }
+
+    void stop() {
+      driver_left->stop();
+      driver_right->stop();
+    }
+};
+
+MotorController *motor_controller = new MotorController();
 
 /*****************************************************************************
  *****************************************************************************
@@ -893,6 +1032,34 @@ bool obstacleAvoidance()
 //####################### ARDUINO SETUP FUNCTIONS #######################
 void setup()
 {
+  motor_controller->mount(Pin::RPWM_1, Pin::LPWM_1, Pin::REN_1, Pin::RPWM_2, Pin::LPWM_2, Pin::REN_2);
+
+// test
+delay(1000);
+motor_controller->forward();
+delay(2000);
+motor_controller->stop();
+delay(1000);
+motor_controller->reverse();
+
+delay(2000);
+motor_controller->set_speed(150);
+
+delay(2000);
+motor_controller->turn_left();
+
+
+delay(2000);
+motor_controller->turn_right();
+
+delay(2000);
+motor_controller->stop();
+
+
+delay(60000);
+
+//end test
+
   //1. SETUP PIN MODES
   pinMode(Pin::START_BUTTON, INPUT);
   pinMode(Pin::STOP_BUTTON, INPUT);
@@ -1096,4 +1263,9 @@ void loop() {
     }
   }
   // END ROBOT ACTIVE MODE
+}
+
+
+void cleanup() {
+  delete motor_controller;
 }

@@ -59,5 +59,6 @@ enum Direction
   NONE
 };
 
-//
+// number of motors per motor driver
+const int MOTORS_PER_MOTOR_DRIVER = 2;
 #endif
