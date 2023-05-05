@@ -105,7 +105,7 @@ class Motor {
     Motor() = default;
     virtual ~Motor() = default;
 
-    virtual void mount(
+    virtual void setup(
       const uint8_t positive_pin, 
       const uint8_t negative_pin, 
       const uint8_t en_pin) = 0;
@@ -147,19 +147,19 @@ class MotorDriver: public Motor {
   public:
     MotorDriver() = default;
     ~MotorDriver() = default;
-    void mount(
+    void setup(
       const uint8_t positive_pin, 
       const uint8_t negative_pin, 
       const uint8_t en_pin)
     {
-      // mount motor
+      // setup motor
       this->positive_pin = positive_pin;
       this->negative_pin = negative_pin;
 
       pinMode(this->positive_pin, OUTPUT);
       pinMode(this->negative_pin, OUTPUT);
 
-      // mount enable/pwm pin
+      // setup enable/pwm pin
       this->en_pin = en_pin;
       pinMode(en_pin, OUTPUT);
 
@@ -182,7 +182,7 @@ class MotorController {
   public:
     MotorController() = default;
     ~MotorController() = default;
-    void mount(
+    void setup(
       const uint8_t positive_pin_left, 
       const uint8_t negative_pin_left, 
       const uint8_t en_pin_left,
@@ -190,8 +190,8 @@ class MotorController {
       const uint8_t negative_pin_right, 
       const uint8_t en_pin_right
     ) {
-      driver_left->mount(positive_pin_left, negative_pin_left, en_pin_left);
-      driver_right->mount(positive_pin_right, negative_pin_right, en_pin_right);
+      driver_left->setup(positive_pin_left, negative_pin_left, en_pin_left);
+      driver_right->setup(positive_pin_right, negative_pin_right, en_pin_right);
     }
 
     MotorController *forward(
@@ -280,7 +280,36 @@ class MotorController {
     }
 };
 
+
+class InfraRed {
+  protected:
+    uint8_t pin;
+    int last_state;
+  public:
+    InfraRed() = default;
+    ~InfraRed() = default;
+    
+    void setup(uint8_t pin) {
+      this->pin = pin;
+      this->last_state =LOW;
+      pinMode(this->pin, INPUT);
+    }
+
+    bool read() {
+      const bool state = digitalRead(this->pin) == LOW ? true : false;
+      this->last_state = state;
+      return state;
+    }
+
+    bool get_last_state() {
+      return this->last_state;
+    }
+};
+
 MotorController *motor_controller = new MotorController();
+InfraRed front_ir;
+InfraRed left_ir;
+InfraRed right_ir;
 
 /*****************************************************************************
  *****************************************************************************
@@ -294,45 +323,25 @@ MotorController *motor_controller = new MotorController();
  /*
    Turns all the motor in forward direction
  */
-void forward(const unsigned int motor_speed = MOTOR_SPEED, const unsigned int duration = 0)
+void forward(const uint8_t motor_speed = MOTOR_SPEED, const uint16_t duration = 0)
 {
-  digitalWrite(Pin::RPWM_1, HIGH);
-  digitalWrite(Pin::LPWM_1, LOW);
-  digitalWrite(Pin::RPWM_2, HIGH);
-  digitalWrite(Pin::LPWM_2, LOW);
-
-  analogWrite(Pin::REN_1, motor_speed);
-  analogWrite(Pin::REN_2, motor_speed);
-
-  State::motor = HIGH;
   digitalWrite(Pin::LEFT_LED, LOW);
   digitalWrite(Pin::RIGHT_LED, LOW);
 
-  if (duration > 0) {
-    delay(duration);
-    digitalWrite(Pin::RPWM_1, LOW);
-    digitalWrite(Pin::LPWM_1, LOW);
-    digitalWrite(Pin::RPWM_2, LOW);
-    digitalWrite(Pin::LPWM_2, LOW);
-  }
+  motor_controller->set_speed(motor_speed)
+                  ->forward(duration);
 }
 
 /*
    Turns all the motor in backward direction
 */
-void backward(const unsigned int SPEED = MOTOR_SPEED)
+void backward(const uint8_t motor_speed = MOTOR_SPEED, const uint16_t duration = 0)
 {
-  digitalWrite(Pin::RPWM_1, LOW);
-  digitalWrite(Pin::LPWM_1, HIGH);
-  digitalWrite(Pin::RPWM_2, LOW);
-  digitalWrite(Pin::LPWM_2, HIGH);
+  digitalWrite(Pin::LEFT_LED, HIGH);
+  digitalWrite(Pin::RIGHT_LED, HIGH);
 
-  analogWrite(Pin::REN_1, SPEED);
-  analogWrite(Pin::REN_2, SPEED);
-
-  State::motor = HIGH;
-  digitalWrite(Pin::LEFT_LED, LOW);
-  digitalWrite(Pin::RIGHT_LED, LOW);
+  motor_controller->set_speed(motor_speed)
+                  ->reverse(duration);
 }
 
 /*
@@ -341,25 +350,15 @@ void backward(const unsigned int SPEED = MOTOR_SPEED)
    Right motors (2) ON
 
 */
-void turnLeft(const unsigned int steeringSpeed = MOTOR_SPEED, const unsigned int steeringDuration = 0)
+void turnLeft(const uint8_t steering_speed = MOTOR_SPEED, const uint16_t steering_duration = STEERING_DURATION)
 {
-  digitalWrite(Pin::RPWM_1, LOW);
-  digitalWrite(Pin::LPWM_1, LOW);
-  digitalWrite(Pin::RPWM_2, HIGH);
-  digitalWrite(Pin::LPWM_2, LOW);
-
-  analogWrite(Pin::REN_1, 0);
-  analogWrite(Pin::REN_2, steeringSpeed);
-
   // indicators
   digitalWrite(Pin::LEFT_LED, HIGH);
   digitalWrite(Pin::RIGHT_LED, LOW);
 
-  // stop steering
-  if (steeringDuration > 0) {
-    delay(steeringDuration);
-    digitalWrite(Pin::RPWM_2, LOW);
-  }
+  motor_controller->set_speed(steering_speed)
+                  ->turn_left()
+                  ->stop_after(steering_duration);
 }
 
 /*
@@ -367,23 +366,15 @@ void turnLeft(const unsigned int steeringSpeed = MOTOR_SPEED, const unsigned int
    Left motors (1) OFF
    Right motors (2) ON
 */
-void turnRight(const unsigned int steeringSpeed = MOTOR_SPEED, const unsigned int steeringDuration = 0)
+void turnRight(const uint8_t steering_speed = MOTOR_SPEED, const uint16_t steering_duration = STEERING_DURATION)
 {
-  digitalWrite(Pin::RPWM_1, HIGH);
-  digitalWrite(Pin::LPWM_1, LOW);
-  digitalWrite(Pin::RPWM_2, LOW);
-  digitalWrite(Pin::LPWM_2, LOW);
-
-  analogWrite(Pin::REN_1, steeringSpeed);
-  analogWrite(Pin::REN_2, 0);
-
+  // indicators
   digitalWrite(Pin::LEFT_LED, LOW);
   digitalWrite(Pin::RIGHT_LED, HIGH);
 
-  if (steeringDuration > 0) {
-    delay(steeringDuration);
-    digitalWrite(Pin::RPWM_1, LOW);
-  }
+  motor_controller->set_speed(steering_speed)
+                  ->turn_right()
+                  ->stop_after(steering_duration);
 }
 
 /*
@@ -393,21 +384,7 @@ void turnRight(const unsigned int steeringSpeed = MOTOR_SPEED, const unsigned in
 */
 void stopForwardMotors(const unsigned int stoppingSpeed = MOTOR_SPEED)
 {
-  for (int Speed = stoppingSpeed; Speed >= 0 && State::motor == HIGH; Speed--)
-  {
-    analogWrite(Pin::REN_1, Speed);
-    analogWrite(Pin::REN_2, Speed);
-    delay(2);
-  }
-
-  digitalWrite(Pin::RPWM_1, LOW);
-  digitalWrite(Pin::LPWM_1, LOW);
-  digitalWrite(Pin::RPWM_2, LOW);
-  digitalWrite(Pin::LPWM_2, LOW);
-
-  State::motor = LOW;
-  digitalWrite(Pin::LEFT_LED, LOW);
-  digitalWrite(Pin::RIGHT_LED, LOW);
+  motor_controller->stop();
 }
 
 /*
@@ -417,43 +394,7 @@ void stopForwardMotors(const unsigned int stoppingSpeed = MOTOR_SPEED)
 */
 void stopBackwardMotors(const unsigned int stoppingSpeed = MOTOR_SPEED)
 {
-  for (int Speed = stoppingSpeed; Speed >= 0 && State::motor == HIGH; Speed--)
-  {
-    analogWrite(Pin::REN_1, Speed);
-    analogWrite(Pin::REN_2, Speed);
-    delay(2);
-  }
-
-  digitalWrite(Pin::RPWM_1, LOW);
-  digitalWrite(Pin::LPWM_1, LOW);
-  digitalWrite(Pin::RPWM_2, LOW);
-  digitalWrite(Pin::LPWM_2, LOW);
-
-  State::motor = LOW;
-  digitalWrite(Pin::LEFT_LED, LOW);
-  digitalWrite(Pin::RIGHT_LED, LOW);
-}
-
-/*
-   detect obstacle in front of the robot
-
-   This function is an ISR function that changes the value of State::obstacle
-   when an obstacle is detected at MINIMUM_DISTANCE
-*/
-void detectObstacle()
-{
-  //  State::obstacle = false; // TO BE REMOVED once the IR sensor is delivered
-
-    // NORMAL DETECTION
-  if (digitalRead(Pin::FRONT_IR) == LOW)
-  {
-    State::obstacle = true;
-  }
-  else {
-    State::obstacle = false;
-  }
-
-  NavigationEntry::obstacle = State::obstacle;
+  motor_controller->stop();
 }
 
 /*
@@ -901,32 +842,6 @@ double getCompassHeading()
 }
 
 /*
-   Calculate distance with ultrasonic sensor
-
-*/
-// double calculateDistance(const int trig, const int echo)
-// {
-//   static unsigned long triggerTime = 0;
-
-//   if(millis() - triggerTime >= 24)
-//   {
-//     digitalWrite(trig, LOW);
-//     delayMicroseconds(2);
-//     digitalWrite(trig, HIGH);
-//     delayMicroseconds(10);
-//     digitalWrite(trig, LOW);
-//   }
-
-//   double duration = pulseIn(echo, HIGH);
-//   double distance = 0.017 * duration;
-
-// //    Serial.print("Distance: ");
-// //    Serial.println(distance);
-
-//   return distance;
-// }
-
-/*
    Choose free side
 
    This function choose the free side between left and right by
@@ -1082,42 +997,42 @@ void setup()
     //1. SETUP PIN MODES
   pinMode(Pin::START_BUTTON, INPUT);
   pinMode(Pin::STOP_BUTTON, INPUT);
-  pinMode(Pin::FRONT_IR, INPUT);
-  pinMode(Pin::LEFT_ECHO, INPUT);
-  pinMode(Pin::RIGHT_ECHO, INPUT);
-  pinMode(Pin::LEFT_TRIG, INPUT);
-  pinMode(Pin::RIGHT_TRIG, INPUT);
   pinMode(Pin::BUZZER, OUTPUT);
   pinMode(Pin::LEFT_LED, OUTPUT);
   pinMode(Pin::RIGHT_LED, OUTPUT);
   pinMode(Pin::STOP_LED, OUTPUT);
   pinMode(Pin::ACTIVE_LED, OUTPUT);
 
-  motor_controller->mount(Pin::RPWM_1, Pin::LPWM_1, Pin::REN_1, Pin::RPWM_2, Pin::LPWM_2, Pin::REN_2);
+  motor_controller->setup(Pin::RPWM_1, Pin::LPWM_1, Pin::REN_1, Pin::RPWM_2, Pin::LPWM_2, Pin::REN_2);
+
+  // setup infrared sensors
+  front_ir.setup(Pin::FRONT_IR);
+  left_ir.setup(Pin::LEFT_TRIG);
+  right_ir.setup(Pin::RIGHT_TRIG);
 
 // test
-delay(1000);
-motor_controller->reverse(1500)->forward(1500)->stop();
-// delay(2000);
-// motor_controller->stop();
 // delay(1000);
-// motor_controller->reverse();
+// motor_controller->reverse(1500)->forward(1500)->stop();
+// // delay(2000);
+// // motor_controller->stop();
+// // delay(1000);
+// // motor_controller->reverse();
 
-// delay(2000);
-// motor_controller->set_speed(150);
+// // delay(2000);
+// // motor_controller->set_speed(150);
 
-// delay(2000);
-// motor_controller->turn_left()->stop_after(1000);
-
-
-// delay(5000);
-// motor_controller->turn_right();
-
-// delay(2000);
-// motor_controller->stop();
+// // delay(2000);
+// // motor_controller->turn_left()->stop_after(1000);
 
 
-delay(60000);
+// // delay(5000);
+// // motor_controller->turn_right();
+
+// // delay(2000);
+// // motor_controller->stop();
+
+
+// delay(60000);
 
 //end test
 
@@ -1272,7 +1187,7 @@ void loop() {
   {
     Serial.println("Robot status: WORKING");
 
-    detectObstacle();
+    State::obstacle = front_ir.read();
 
     if (!State::obstacle)
     {
