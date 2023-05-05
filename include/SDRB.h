@@ -37,11 +37,6 @@ class Motor {
 
     void stop() {
       this->state = LOW;
-      for(int speed = MOTOR_SPEED; speed > 100; speed--) {
-        analogWrite(this->en_pin, speed);
-        delay(2);
-      }
-
       digitalWrite(this->positive_pin, LOW);
       digitalWrite(this->negative_pin, LOW);
     }
@@ -167,6 +162,12 @@ class MotorController {
 
     MotorController *stop_after(uint32_t time) {
       delay(time);
+      for(int speed = MOTOR_SPEED; speed > 100; speed--) {
+        driver_left->set_speed(speed);
+        driver_right->set_speed(speed);
+        delay(2);
+      }
+
       driver_left->stop();
       driver_right->stop();
 
