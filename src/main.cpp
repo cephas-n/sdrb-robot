@@ -99,6 +99,7 @@ class Motor {
   protected:
     uint8_t positive_pin;
     uint8_t negative_pin;
+    uint8_t en_pin;
     int state;
   public:
     Motor() = default;
@@ -127,6 +128,11 @@ class Motor {
 
     void stop() {
       this->state = LOW;
+      for(int speed = MOTOR_SPEED; speed > 100; speed--) {
+        analogWrite(this->en_pin, speed);
+        delay(2);
+      }
+
       digitalWrite(this->positive_pin, LOW);
       digitalWrite(this->negative_pin, LOW);
     }
@@ -138,8 +144,6 @@ class Motor {
 };
 
 class MotorDriver: public Motor {
-  protected:
-    uint8_t en_pin;
   public:
     MotorDriver() = default;
     ~MotorDriver() = default;
