@@ -10,7 +10,8 @@
  */
 #ifndef _FUNCTION_PROTOTYPES_H_
 #define _FUNCTION_PROTOTYPES_H_
-double getCompassHeading();
-void getDistanceFromDestination();
-void saveData(const char *filename, const String &entry);
+double get_compass_heading();
+void get_distance_from_destination();
+void save_data(const char *filename, const String &entry);
+void turn_off_Robot();
 #endif

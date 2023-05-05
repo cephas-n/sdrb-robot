@@ -84,7 +84,7 @@ double current_destination[2]  // default: HOME
 
 
 //########### COMMUNICATION ##############
-SoftwareSerial gpsSerial(Pin::GPS_TX, Pin::GPS_RX);
+SoftwareSerial gps_serial(Pin::GPS_TX, Pin::GPS_RX);
 //########### END COMMUNICATION ##############
 
 
@@ -284,7 +284,7 @@ class MotorController {
 class InfraRed {
   protected:
     uint8_t pin;
-    int last_state;
+    bool last_state;
   public:
     InfraRed() = default;
     ~InfraRed() = default;
@@ -306,10 +306,51 @@ class InfraRed {
     }
 };
 
+class Led {
+  protected:
+    uint8_t pin;
+    bool state;
+  public:
+    Led() = default;
+    ~Led() = default;
+
+    void setup(uint8_t pin) {
+      this->pin = pin;
+      this->state = LOW;
+
+      pinMode(this->pin, OUTPUT);
+    }
+
+    void turn_on() {
+      digitalWrite(this->pin, HIGH);
+    }
+
+    void turn_off() {
+      digitalWrite(this->pin, LOW);
+    }
+
+    void blink(uint8_t repeat = 0, uint16_t interval = 500) {
+      for(size_t i = 0; i >= repeat; i++) {
+        this->turn_off();
+        this->turn_on();
+        delay(interval);
+        this->turn_off();
+
+        if(repeat > 0) delay(interval);
+      }
+    }
+};
+
+
 MotorController *motor_controller = new MotorController();
 InfraRed front_ir;
 InfraRed left_ir;
 InfraRed right_ir;
+Led led_stop;
+Led led_active;
+Led led_left;
+Led led_right;
+
 
 /*****************************************************************************
  *****************************************************************************
@@ -325,8 +366,8 @@ InfraRed right_ir;
  */
 void forward(const uint8_t motor_speed = MOTOR_SPEED, const uint16_t duration = 0)
 {
-  digitalWrite(Pin::LEFT_LED, LOW);
-  digitalWrite(Pin::RIGHT_LED, LOW);
+  led_left.turn_off();
+  led_right.turn_off();
 
   motor_controller->set_speed(motor_speed)
                   ->forward(duration);
@@ -337,8 +378,8 @@ void forward(const uint8_t motor_speed = MOTOR_SPEED, const uint16_t duration = 
 */
 void backward(const uint8_t motor_speed = MOTOR_SPEED, const uint16_t duration = 0)
 {
-  digitalWrite(Pin::LEFT_LED, HIGH);
-  digitalWrite(Pin::RIGHT_LED, HIGH);
+  led_left.turn_on();
+  led_right.turn_on();
 
   motor_controller->set_speed(motor_speed)
                   ->reverse(duration);
@@ -350,11 +391,11 @@ void backward(const uint8_t motor_speed = MOTOR_SPEED, const uint16_t duration =
    Right motors (2) ON
 
 */
-void turnLeft(const uint8_t steering_speed = MOTOR_SPEED, const uint16_t steering_duration = STEERING_DURATION)
+void turn_left(const uint8_t steering_speed = MOTOR_SPEED, const uint16_t steering_duration = STEERING_DURATION)
 {
   // indicators
-  digitalWrite(Pin::LEFT_LED, HIGH);
-  digitalWrite(Pin::RIGHT_LED, LOW);
+  led_left.turn_on();
+  led_right.turn_off();
 
   motor_controller->set_speed(steering_speed)
                   ->turn_left()
@@ -366,11 +407,11 @@ void turnLeft(const uint8_t steering_speed = MOTOR_SPEED, const uint16_t steerin
    Left motors (1) OFF
    Right motors (2) ON
 */
-void turnRight(const uint8_t steering_speed = MOTOR_SPEED, const uint16_t steering_duration = STEERING_DURATION)
+void turn_right(const uint8_t steering_speed = MOTOR_SPEED, const uint16_t steering_duration = STEERING_DURATION)
 {
   // indicators
-  digitalWrite(Pin::LEFT_LED, LOW);
-  digitalWrite(Pin::RIGHT_LED, HIGH);
+  led_left.turn_off();
+  led_right.turn_on();
 
   motor_controller->set_speed(steering_speed)
                   ->turn_right()
@@ -382,8 +423,11 @@ void turnRight(const uint8_t steering_speed = MOTOR_SPEED, const uint16_t steeri
    while turning in forward direction
 
 */
-void stopForwardMotors(const unsigned int stoppingSpeed = MOTOR_SPEED)
+void stop_forward_motors(const unsigned int stoppingSpeed = MOTOR_SPEED)
 {
+  led_left.turn_off();
+  led_right.turn_off();
+
   motor_controller->stop();
 }
 
@@ -392,8 +436,11 @@ void stopForwardMotors(const unsigned int stoppingSpeed = MOTOR_SPEED)
    while turning in backward direction
 
 */
-void stopBackwardMotors(const unsigned int stoppingSpeed = MOTOR_SPEED)
+void stop_backward_motors(const unsigned int stoppingSpeed = MOTOR_SPEED)
 {
+  led_left.turn_off();
+  led_right.turn_off();
+
   motor_controller->stop();
 }
 
@@ -402,7 +449,7 @@ void stopBackwardMotors(const unsigned int stoppingSpeed = MOTOR_SPEED)
   then wait 2 more seconds before return void.
   thus, allowing to verify if the obstacle is still in front of the robot every 3 seconds
 */
-void runBuzzer(unsigned int duration = 500)
+void run_buzzer(unsigned int duration = 500)
 {
   digitalWrite(Pin::BUZZER, HIGH);
   delay(duration);
@@ -416,7 +463,7 @@ void runBuzzer(unsigned int duration = 500)
    this function receive data from the bleutooth HC-06
    then return the corresponding command
 */
-Command bluetoothCommand()
+Command bluetooth_command()
 {
   char command = Serial.read();
 
@@ -467,7 +514,7 @@ Command bluetoothCommand()
 
    this function stops everything and put the robot in sleep mode
 */
-void stopRobot()
+void stop_robot()
 {
   Serial.println("Stopping...");
 
@@ -477,17 +524,16 @@ void stopRobot()
   //  State::arrived = false;
 
     //2. STOP MOTORS
-  stopForwardMotors();
-  stopBackwardMotors();
+  motor_controller->stop();
 
   //3. STOP BUZZER
   digitalWrite(Pin::BUZZER, LOW);
 
   //4. LED
-  digitalWrite(Pin::STOP_LED, HIGH);
-  digitalWrite(Pin::ACTIVE_LED, LOW);
-  digitalWrite(Pin::LEFT_LED, LOW);
-  digitalWrite(Pin::RIGHT_LED, LOW);
+  led_left.turn_off();
+  led_right.turn_off();
+  led_active.turn_off();
+  led_stop.turn_on();
 
   Serial.println("Robot status: SLEEPING ......");
 }
@@ -498,7 +544,7 @@ void stopRobot()
    this function is an ISR that modify State::motor
    in order to turn off the robot
 */
-void turnOffRobot()
+void turn_off_robot()
 {
   State::robot = LOW;
 }
@@ -509,29 +555,29 @@ void turnOffRobot()
    this function return the latitude of the current position
    of the robot
 */
-bool gpsLocationFound = false;
-void updateGPSPosition()
+bool gps_location_found = false;
+void update_gps_position()
 {
-  while (gpsSerial.available() > 0)
+  while (gps_serial.available() > 0)
   {
-    gps.encode(gpsSerial.read());
+    gps.encode(gps_serial.read());
   }
 
   if (gps.location.isValid())
   {
-    gpsLocationFound = true;
+    gps_location_found = true;
     NavigationEntry::hasStarted = true;
     Serial.print("Robot current position (latitude, longitude): ");
     Serial.print(gps.location.lat());
     Serial.print(",");
     Serial.println(gps.location.lng());
 
-    getDistanceFromDestination();
+    get_distance_from_destination();
   }
 }
 
-void getDistanceFromDestination() {
-  if (gpsLocationFound) {
+void get_distance_from_destination() {
+  if (gps_location_found) {
     const double distance = TinyGPSPlus::distanceBetween(
       gps.location.lat(),
       gps.location.lng(),
@@ -552,14 +598,14 @@ void getDistanceFromDestination() {
 */
 Direction navigation(double destination_lat, double destination_lng)
 {
-  updateGPSPosition();
+  update_gps_position();
 
-  if (gpsLocationFound)
+  if (gps_location_found)
   {
     int destinationHeading = TinyGPSPlus::courseTo(gps.location.lat(), gps.location.lng(), destination_lat, destination_lng);
     double destinationHeadingLow = destinationHeading - DIRECTION_CORRECTION;
     double destinationHeadingHigh = destinationHeading + DIRECTION_CORRECTION;
-    int currentHeading = getCompassHeading();
+    int currentHeading = get_compass_heading();
 
     //calculate destination distance
     if (active_destination_distance <= 1)
@@ -569,13 +615,13 @@ Direction navigation(double destination_lat, double destination_lng)
 
     // check if the user has arrived
       //HAS ALREADY ARRIVED AT DESTINATION ?
-    getDistanceFromDestination();
-    if (gpsLocationFound && NavigationEntry::distance <= DESTINATION_DIST_PRECISION)
+    get_distance_from_destination();
+    if (gps_location_found && NavigationEntry::distance <= DESTINATION_DIST_PRECISION)
     {
       Serial.println("============================== THE ROBOT HAS ARRIVED AT DESTIONATION " + String(active_destination) + "==================");
       State::robot = LOW;
       State::arrived = true;
-      runBuzzer(3000);
+      run_buzzer(3000);
     }
 
 
@@ -616,12 +662,12 @@ Direction navigation(double destination_lat, double destination_lng)
           }
 
           //update heading
-          currentHeading = getCompassHeading();
+          currentHeading = get_compass_heading();
           destinationHeading = TinyGPSPlus::courseTo(gps.location.lat(), gps.location.lng(), destination_lat, destination_lng);
 
           Serial.println("Turn Right");
           NavigationEntry::steering = 'r';
-          turnRight();
+          turn_right();
           delay(100);
         }
         return NONE;
@@ -639,12 +685,12 @@ Direction navigation(double destination_lat, double destination_lng)
             }
 
             //update heading
-            currentHeading = getCompassHeading();
+            currentHeading = get_compass_heading();
             destinationHeading = TinyGPSPlus::courseTo(gps.location.lat(), gps.location.lng(), destination_lat, destination_lng);
 
             Serial.println("Turn Left");
             NavigationEntry::steering = 'l';
-            turnLeft();
+            turn_left();
             delay(100);
           }
         }
@@ -659,11 +705,11 @@ Direction navigation(double destination_lat, double destination_lng)
             }
 
             //update heading
-            currentHeading = getCompassHeading();
+            currentHeading = get_compass_heading();
             destinationHeading = TinyGPSPlus::courseTo(gps.location.lat(), gps.location.lng(), destination_lat, destination_lng);
 
             Serial.println("Turn Right");
-            turnRight();
+            turn_right();
             NavigationEntry::steering = 'r';
             delay(100);
           }
@@ -681,12 +727,12 @@ Direction navigation(double destination_lat, double destination_lng)
           }
 
           //update heading
-          currentHeading = getCompassHeading();
+          currentHeading = get_compass_heading();
           destinationHeading = TinyGPSPlus::courseTo(gps.location.lat(), gps.location.lng(), destination_lat, destination_lng);
 
           Serial.println("Turn Left");
           NavigationEntry::steering = 'l';
-          turnLeft();
+          turn_left();
           delay(100);
         }
         return NONE;
@@ -709,7 +755,7 @@ Direction navigation(double destination_lat, double destination_lng)
 
    entry_id,latitude,longitude,heading,time_elapsed,obstacle
 */
-bool saveNavigationData()
+bool save_navigation_data()
 {
   if (!NavigationEntry::hasStarted)
   {
@@ -746,7 +792,7 @@ bool saveNavigationData()
   }
 
   // save data
-  saveData(NavigationEntry::filename.c_str(), entry.c_str());
+  save_data(NavigationEntry::filename.c_str(), entry.c_str());
 
   return true;
 }
@@ -757,7 +803,7 @@ bool saveNavigationData()
 
    this function write data to sd memory
 */
-void saveData(const char* filename, const String& data)
+void save_data(const char* filename, const String& data)
 {
   Serial.print("SD Card: Opening '");
   Serial.print(filename);
@@ -831,7 +877,7 @@ void loadData(const char* filename, String& data)
    Get compass heading with respect to North
 
 */
-double getCompassHeading()
+double get_compass_heading()
 {
   compass.setCalibration(-922, 925, -1221, 462, -591, 0);
   // Read compass values
@@ -906,7 +952,7 @@ bool obstacleAvoidance()
     switch (chooseSide()) {
     case LEFT:
       // LEFT
-      turnRight(MOTOR_SPEED, 1500);
+      turn_right(MOTOR_SPEED, 1500);
       while (true) {
         // advance
         forward(150, 1000);
@@ -917,12 +963,12 @@ bool obstacleAvoidance()
 
       Serial.println("the Robot can turn left now ============");
 
-      stopForwardMotors();
+      stop_forward_motors();
 
-      turnLeft(MOTOR_SPEED, 1500);
+      turn_left(MOTOR_SPEED, 1500);
 
       forward(MOTOR_SPEED, 1000);
-      stopForwardMotors();
+      stop_forward_motors();
 
       while (true) {
         forward(150, 1000);
@@ -930,20 +976,20 @@ bool obstacleAvoidance()
         if (digitalRead(Pin::RIGHT_TRIG) == HIGH) break;
       }
 
-      stopForwardMotors();
-      turnLeft(MOTOR_SPEED, 1500);
+      stop_forward_motors();
+      turn_left(MOTOR_SPEED, 1500);
 
       while (Avoidance::duration > 0) {
         forward(150, 1000);
         Avoidance::duration--;
       }
 
-      stopForwardMotors();
-      turnRight(MOTOR_SPEED, 1500);
-      runBuzzer();
+      stop_forward_motors();
+      turn_right(MOTOR_SPEED, 1500);
+      run_buzzer();
       break;
     case RIGHT:
-      turnLeft(MOTOR_SPEED, 1500);
+      turn_left(MOTOR_SPEED, 1500);
       while (true) {
         // advance
         forward(150, 1000);
@@ -954,12 +1000,12 @@ bool obstacleAvoidance()
 
       Serial.println("the Robot can turn right now ============");
 
-      stopForwardMotors();
+      stop_forward_motors();
 
-      turnRight(MOTOR_SPEED, 1500);
+      turn_right(MOTOR_SPEED, 1500);
 
       forward(MOTOR_SPEED, 1000);
-      stopForwardMotors();
+      stop_forward_motors();
 
       while (true) {
         forward(150, 1000);
@@ -967,17 +1013,17 @@ bool obstacleAvoidance()
         if (digitalRead(Pin::LEFT_TRIG) == HIGH) break;
       }
 
-      stopForwardMotors();
-      turnRight(MOTOR_SPEED, 1500);
+      stop_forward_motors();
+      turn_right(MOTOR_SPEED, 1500);
 
       while (Avoidance::duration > 0) {
         forward(150, 1000);
         Avoidance::duration--;
       }
 
-      stopForwardMotors();
-      turnLeft(MOTOR_SPEED, 1500);
-      runBuzzer();
+      stop_forward_motors();
+      turn_left(MOTOR_SPEED, 1500);
+      run_buzzer();
       break;
     }
     delay(60000);
@@ -1003,41 +1049,25 @@ void setup()
   pinMode(Pin::STOP_LED, OUTPUT);
   pinMode(Pin::ACTIVE_LED, OUTPUT);
 
-  motor_controller->setup(Pin::RPWM_1, Pin::LPWM_1, Pin::REN_1, Pin::RPWM_2, Pin::LPWM_2, Pin::REN_2);
+  // setup motors controller
+  motor_controller->setup(
+    Pin::RPWM_1, Pin::LPWM_1, Pin::REN_1, 
+    Pin::RPWM_2, Pin::LPWM_2, Pin::REN_2
+  );
 
   // setup infrared sensors
   front_ir.setup(Pin::FRONT_IR);
   left_ir.setup(Pin::LEFT_TRIG);
   right_ir.setup(Pin::RIGHT_TRIG);
 
-// test
-// delay(1000);
-// motor_controller->reverse(1500)->forward(1500)->stop();
-// // delay(2000);
-// // motor_controller->stop();
-// // delay(1000);
-// // motor_controller->reverse();
-
-// // delay(2000);
-// // motor_controller->set_speed(150);
-
-// // delay(2000);
-// // motor_controller->turn_left()->stop_after(1000);
-
-
-// // delay(5000);
-// // motor_controller->turn_right();
-
-// // delay(2000);
-// // motor_controller->stop();
-
-
-// delay(60000);
-
-//end test
+  // setup leds
+  led_stop.setup(Pin::STOP_LED);
+  led_active.setup(Pin::ACTIVE_LED);
+  led_left.setup(Pin::LEFT_LED);
+  led_right.setup(Pin::RIGHT_LED);
 
   //2. ATTACH INTERRUPT SERVICE ROUTINES
-  attachInterrupt(digitalPinToInterrupt(Pin::STOP_BUTTON), turnOffRobot, RISING);
+  attachInterrupt(digitalPinToInterrupt(Pin::STOP_BUTTON), turn_off_robot, RISING);
 
   //3. INITIALIZE SERIAL COMMUNICATION
   Serial.begin(9600);
@@ -1045,8 +1075,8 @@ void setup()
   Serial.println("Serial monitor: OK");
 
   //5. INITIALIZE GPS COMMUNICATION
-  gpsSerial.begin(9600);
-  while (!gpsSerial)
+  gps_serial.begin(9600);
+  while (!gps_serial)
   {
     Serial.println("GPS com: FAILED");
   }
@@ -1066,8 +1096,8 @@ void setup()
   }
 
   //OTHERS
-  digitalWrite(Pin::STOP_LED, HIGH);
-  digitalWrite(Pin::ACTIVE_LED, LOW);
+  led_stop.turn_on();
+  led_active.turn_off();
 }
 //####################### END ARDUINO SETUP FUNCTIONS #######################
 
@@ -1083,7 +1113,7 @@ void setup()
  *****************************************************************************/
 void loop() {
   ////  0. DEBUGGING
-  //  saveNavigationData(); //save navigation history 
+  //  save_navigation_data(); //save navigation history 
   //  detectObstacle();
   //  if(State::obstacle)
   //  {
@@ -1092,16 +1122,16 @@ void loop() {
   //  else{
   //    digitalWrite(Pin::BUZZER, LOW);
   //  }
-  //  bluetoothCommand();
+  //  bluetooth_command();
   //  obstacleAvoidance();
-  //  getDistanceFromDestination();
-  //  updateGPSPosition();
+  //  get_distance_from_destination();
+  //  update_gps_position();
   //  Serial.print("Heading: ");
   //  Serial.println(TinyGPSPlus::courseTo(gps.location.lat(), gps.location.lng(), current_destination[0], current_destination[1]));
-  //  updateGPSPosition();
-  //  saveNavigationData();
+  //  update_gps_position();
+  //  save_navigation_data();
   //  Serial.println("Compass: ");
-  //  Serial.println(getCompassHeading());
+  //  Serial.println(get_compass_heading());
 
   //  Serial.print("Distance: ");
   //  Serial.println(calculateDistance(Pin::FRONT_TRIG, Pin::FRONT_ECHO));
@@ -1137,7 +1167,7 @@ void loop() {
     // 1. BLUETOOTH COMMAND
   if (Serial.available() > 0)
   {
-    Command cmd = bluetoothCommand();
+    Command cmd = bluetooth_command();
     switch (cmd)
     {
       case START:
@@ -1147,7 +1177,7 @@ void loop() {
         delay(3000);
         break;
       case STOP:
-        stopRobot();
+        stop_robot();
         break;
       case DESTINATION_ACCOUNTING:
       case DESTINATION_CAFE:
@@ -1171,7 +1201,7 @@ void loop() {
 
   if (State::robot == LOW)
   {
-    stopRobot();
+    stop_robot();
     digitalWrite(Pin::ACTIVE_LED, LOW);
     digitalWrite(Pin::STOP_LED, HIGH);
   }
@@ -1195,11 +1225,11 @@ void loop() {
       switch (navigation(current_destination[0], current_destination[1]))
       {
       case LEFT:
-        turnLeft();
+        turn_left();
         delay(200);
         break;
       case RIGHT:
-        turnRight();
+        turn_right();
         delay(200);
         break;
       case FRONT:
@@ -1207,14 +1237,14 @@ void loop() {
         break;
         forward(100);
       }
-      saveNavigationData(); //save navigation history 
+      save_navigation_data(); //save navigation history 
       //END AUTONOMOUS NAVIGATION
     }
     else
     {
       //3.3. OBSTACLE AVOIDANCE       
-      stopForwardMotors(STOP_SPEED);
-      runBuzzer();
+      stop_forward_motors(STOP_SPEED);
+      run_buzzer();
       obstacleAvoidance();
     }
   }
