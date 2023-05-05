@@ -671,7 +671,7 @@ Direction choose_side()
    the robot. It returns true if no obstacle is detected
 
 */
-int isRightSideFree()
+int is_right_side_free()
 {
   return digitalRead(Pin::RIGHT_TRIG) == LOW ? 0 : 1;
 }
@@ -683,11 +683,11 @@ int isRightSideFree()
    the robot. It returns true if no obstacle is detected
 
 */
-int isLeftSideFree()
-{
-  const int state = digitalRead(Pin::LEFT_TRIG);
-  return  state == LOW ? 0 : 1;
-}
+// int is_left_side_free()
+// {
+//   const int state = digitalRead(Pin::LEFT_TRIG);
+//   return  state == LOW ? 0 : 1;
+// }
 
 /*
    Obstacle Avoidance
@@ -697,15 +697,15 @@ int isLeftSideFree()
    the algorithm should restart)
 
 */
-bool obstacleAvoidance()
+bool obstacle_avoidance()
 {
   Serial.println("avoidance started");
   while (State::obstacle == HIGH)
   {
-    switch (choose_side()) {
+    switch(choose_side()) {
     case LEFT:
       // LEFT
-      turn_right(MOTOR_SPEED, 1500);
+      turn_right();
       while (true) {
         // advance
         forward(150, 1000);
@@ -718,7 +718,7 @@ bool obstacleAvoidance()
 
       stop_forward_motors();
 
-      turn_left(MOTOR_SPEED, 1500);
+      turn_left();
 
       forward(MOTOR_SPEED, 1000);
       stop_forward_motors();
@@ -730,7 +730,7 @@ bool obstacleAvoidance()
       }
 
       stop_forward_motors();
-      turn_left(MOTOR_SPEED, 1500);
+      turn_left();
 
       while (Avoidance::duration > 0) {
         forward(150, 1000);
@@ -738,11 +738,11 @@ bool obstacleAvoidance()
       }
 
       stop_forward_motors();
-      turn_right(MOTOR_SPEED, 1500);
+      turn_right();
       run_buzzer();
       break;
     case RIGHT:
-      turn_left(MOTOR_SPEED, 1500);
+      turn_left();
       while (true) {
         // advance
         forward(150, 1000);
@@ -755,27 +755,27 @@ bool obstacleAvoidance()
 
       stop_forward_motors();
 
-      turn_right(MOTOR_SPEED, 1500);
+      turn_right();
 
-      forward(MOTOR_SPEED, 1000);
+      forward(MOTOR_SPEED);
       stop_forward_motors();
 
       while (true) {
-        forward(150, 1000);
+        forward(150);
 
         if (digitalRead(Pin::LEFT_TRIG) == HIGH) break;
       }
 
       stop_forward_motors();
-      turn_right(MOTOR_SPEED, 1500);
+      turn_right();
 
       while (Avoidance::duration > 0) {
-        forward(150, 1000);
+        forward(150);
         Avoidance::duration--;
       }
 
       stop_forward_motors();
-      turn_left(MOTOR_SPEED, 1500);
+      turn_left();
       run_buzzer();
       break;
     }
@@ -876,7 +876,7 @@ void loop() {
   //    digitalWrite(Pin::BUZZER, LOW);
   //  }
   //  bluetooth_command();
-  //  obstacleAvoidance();
+  //  obstacle_avoidance();
   //  get_distance_from_destination();
   //  update_gps_position();
   //  Serial.print("Heading: ");
@@ -889,11 +889,11 @@ void loop() {
   //  Serial.print("Distance: ");
   //  Serial.println(calculateDistance(Pin::FRONT_TRIG, Pin::FRONT_ECHO));
   //  
-  Serial.print("Distance Left: ");
-  Serial.println(isLeftSideFree());
-  //  
-  Serial.print("Distance Right: ");
-  Serial.println(isRightSideFree());
+  // Serial.print("Distance Left: ");
+  // Serial.println(is_left_side_free());
+  // //  
+  // Serial.print("Distance Right: ");
+  // Serial.println(is_right_side_free());
   //  
   //  Serial.print("Obstacle: ");
   //  Serial.println(detectObstacle());
@@ -902,10 +902,10 @@ void loop() {
   //  Serial.println(choose_side());
   //  
   //  Serial.print("Check Left side: ");
-  //  Serial.println(isLeftSideFree());
+  //  Serial.println(is_left_side_free());
   //  
   //  Serial.print("Check Right side: ");
-  //  Serial.println(isRightSideFree());
+  //  Serial.println(is_right_side_free());
   //  Serial.print("Start Button: ");
   //  Serial.println(digitalRead(Pin::START_BUTTON));
   //  
@@ -998,7 +998,7 @@ void loop() {
       //3.3. OBSTACLE AVOIDANCE       
       stop_forward_motors(STOP_SPEED);
       run_buzzer();
-      obstacleAvoidance();
+      obstacle_avoidance();
     }
   }
   // END ROBOT ACTIVE MODE
