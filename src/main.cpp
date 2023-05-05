@@ -190,22 +190,43 @@ class MotorController {
       driver_right->mount(positive_pin_right, negative_pin_right, en_pin_right);
     }
 
-    MotorController *forward() {
+    MotorController *forward(
+      const uint16_t duration = FORWARD_DURATION, 
+      void (*in_progress)() = nullptr, 
+      void (*completed)() = nullptr)
+    {
       if(driver_left->get_state() == HIGH) driver_left->stop();
       if(driver_right->get_state() == HIGH) driver_right->stop();
 
-      driver_left->forward();
-      driver_right->forward();
+      const long int start_time = millis();
+      while(millis() - start_time <= duration) {
+        if(*in_progress != nullptr) in_progress();
+
+        driver_left->forward();
+        driver_right->forward();
+      }
+
+      if(*completed != nullptr) completed();
 
       return this;
     }
 
-    MotorController *reverse() {
+    MotorController *reverse(
+      const uint16_t duration = FORWARD_DURATION, 
+      void (*in_progress)() = nullptr, 
+      void (*completed)() = nullptr) 
+    {
       if(driver_left->get_state() == HIGH) driver_left->stop();
       if(driver_right->get_state() == HIGH) driver_right->stop();
 
-      driver_left->reverse();
-      driver_right->reverse();
+      const long int start_time = millis();
+      while(millis() - start_time <= duration) {
+        if(*in_progress != nullptr) in_progress();
+        driver_left->reverse();
+        driver_right->reverse();
+      }
+
+      if(*completed != nullptr) completed();
 
       return this;
     }
@@ -231,17 +252,21 @@ class MotorController {
       return this;
     }
 
-    void *stop_after(uint32_t time) {
+    MotorController *stop_after(uint32_t time) {
       delay(time);
       driver_left->stop();
       driver_right->stop();
+
+      return this;
     }
 
-    void *stop_when(bool (*callback)()) {
+    MotorController *stop_when(bool (*callback)()) {
       if(callback()) {
         driver_left->stop();
         driver_right->stop();
       }
+
+      return this;
     }
 
 
@@ -1050,35 +1075,7 @@ bool obstacleAvoidance()
 //####################### ARDUINO SETUP FUNCTIONS #######################
 void setup()
 {
-  motor_controller->mount(Pin::RPWM_1, Pin::LPWM_1, Pin::REN_1, Pin::RPWM_2, Pin::LPWM_2, Pin::REN_2);
-
-// test
-delay(1000);
-motor_controller->forward();
-delay(2000);
-motor_controller->stop();
-delay(1000);
-motor_controller->reverse();
-
-delay(2000);
-motor_controller->set_speed(150);
-
-delay(2000);
-motor_controller->turn_left()->stop_after(1000);
-
-
-delay(5000);
-motor_controller->turn_right();
-
-delay(2000);
-motor_controller->stop();
-
-
-delay(60000);
-
-//end test
-
-  //1. SETUP PIN MODES
+    //1. SETUP PIN MODES
   pinMode(Pin::START_BUTTON, INPUT);
   pinMode(Pin::STOP_BUTTON, INPUT);
   pinMode(Pin::FRONT_IR, INPUT);
@@ -1086,17 +1083,39 @@ delay(60000);
   pinMode(Pin::RIGHT_ECHO, INPUT);
   pinMode(Pin::LEFT_TRIG, INPUT);
   pinMode(Pin::RIGHT_TRIG, INPUT);
-  pinMode(Pin::RPWM_1, OUTPUT);
-  pinMode(Pin::LPWM_1, OUTPUT);
-  pinMode(Pin::REN_1, OUTPUT);
-  pinMode(Pin::RPWM_2, OUTPUT);
-  pinMode(Pin::LPWM_2, OUTPUT);
-  pinMode(Pin::REN_2, OUTPUT);
   pinMode(Pin::BUZZER, OUTPUT);
   pinMode(Pin::LEFT_LED, OUTPUT);
   pinMode(Pin::RIGHT_LED, OUTPUT);
   pinMode(Pin::STOP_LED, OUTPUT);
   pinMode(Pin::ACTIVE_LED, OUTPUT);
+
+  motor_controller->mount(Pin::RPWM_1, Pin::LPWM_1, Pin::REN_1, Pin::RPWM_2, Pin::LPWM_2, Pin::REN_2);
+
+// test
+delay(1000);
+motor_controller->reverse(1500)->forward(1500)->stop();
+// delay(2000);
+// motor_controller->stop();
+// delay(1000);
+// motor_controller->reverse();
+
+// delay(2000);
+// motor_controller->set_speed(150);
+
+// delay(2000);
+// motor_controller->turn_left()->stop_after(1000);
+
+
+// delay(5000);
+// motor_controller->turn_right();
+
+// delay(2000);
+// motor_controller->stop();
+
+
+delay(60000);
+
+//end test
 
   //2. ATTACH INTERRUPT SERVICE ROUTINES
   attachInterrupt(digitalPinToInterrupt(Pin::STOP_BUTTON), turnOffRobot, RISING);
