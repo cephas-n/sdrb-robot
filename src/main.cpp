@@ -486,7 +486,9 @@ Direction navigation(const double destination_lat, const double destination_lng)
 */
 bool save_navigation_data()
 {
-  if (!NavigationEntry::hasStarted)
+  static uint32_t last_update = millis();
+
+  if (!NavigationEntry::hasStarted || millis() - last_update <= LOGGER_SAMPLING_TIME)
   {
     return false;
   }
@@ -729,9 +731,9 @@ bool obstacle_avoidance()
 }
 
 void logger() {
-  // every 5seconds
+  // every 5 seconds
   static uint32_t last_update = millis();
-  if(millis() - last_update >= SAMPLING_TIME) {
+  if(millis() - last_update >= LOGGER_SAMPLING_TIME) {
     // Robot
     Serial.println("ROBOT STATUS: " + String(State::robot ? "Working" : "Sleeping zzz..."));
     Serial.println("HAS ARRIVED AT DESTINATION: " + String(State::arrived ? "YES" : "NO"));
