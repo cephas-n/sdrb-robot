@@ -400,7 +400,7 @@ Direction navigation(const double destination_lat, const double destination_lng)
 
           Serial.println("Turn Right");
           NavigationEntry::steering = 'r';
-          turn_right();
+          turn_right(NAVIGATION_STEERING_SPEED);
           delay(100);
         }
         return NONE;
@@ -423,7 +423,7 @@ Direction navigation(const double destination_lat, const double destination_lng)
 
             Serial.println("Turn Left");
             NavigationEntry::steering = 'l';
-            turn_left();
+            turn_left(NAVIGATION_STEERING_SPEED);
             delay(100);
           }
         }
@@ -442,7 +442,7 @@ Direction navigation(const double destination_lat, const double destination_lng)
             destinationHeading = TinyGPSPlus::courseTo(gps.location.lat(), gps.location.lng(), destination_lat, destination_lng);
 
             Serial.println("Turn Right");
-            turn_right();
+            turn_right(NAVIGATION_STEERING_SPEED);
             NavigationEntry::steering = 'r';
             delay(100);
           }
@@ -465,7 +465,7 @@ Direction navigation(const double destination_lat, const double destination_lng)
 
           Serial.println("Turn Left");
           NavigationEntry::steering = 'l';
-          turn_left();
+          turn_left(NAVIGATION_STEERING_SPEED);
           delay(100);
         }
         return NONE;
@@ -905,11 +905,11 @@ void loop() {
       switch (navigation(current_destination[0], current_destination[1]))
       {
         case LEFT:
-          turn_left();
+          turn_left(NAVIGATION_STEERING_SPEED);
           delay(200);
           break;
         case RIGHT:
-          turn_right();
+          turn_right(NAVIGATION_STEERING_SPEED);
           delay(200);
           break;
         case FRONT:

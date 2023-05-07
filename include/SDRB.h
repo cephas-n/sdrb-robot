@@ -161,9 +161,10 @@ class MotorController {
     }
 
     MotorController *stop_after(uint32_t time) {
-      delay(time);
-      this->stop();
-
+      if(time > 0) {
+        delay(time);
+        this->stop();
+      }
       return this;
     }
 
@@ -249,8 +250,7 @@ class Led {
         this->turn_on();
         delay(interval);
         this->turn_off();
-
-        if(i > 1) delay(interval);
+        delay(interval);
       }
     }
 };
