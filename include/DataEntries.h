@@ -4,11 +4,11 @@
  * @brief Data structure of entries/parameters to be saved in the SD Memmory Card
  * @version 0.1
  * @date 2023-05-04
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
-// #include "string.h"
+ // #include "string.h"
 #ifndef _DATA_ENTRIES_H_
 #define _DATA_ENTRIES_H_
 

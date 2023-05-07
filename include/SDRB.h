@@ -205,7 +205,7 @@ class InfraRed {
       pinMode(this->pin, INPUT);
     }
 
-    bool read() {
+    bool check() {
       const bool state = digitalRead(this->pin) == LOW ? true : false;
       this->last_state = state;
       return state;

@@ -12,8 +12,8 @@
 #ifndef _CONSTANTS_H_
 #define _CONSTANTS_H_
 
-// Estimated amount of time (in milliseconds) require to steer the wheels by 90deg or -90deg
-const unsigned STEERING_DURATION = 1000;
+ // Estimated amount of time (in milliseconds) require to steer the wheels by 90deg or -90deg
+const unsigned STEERING_DURATION = 1500;
 
 // Estimated amount of time (in milliseconds) require to steer the wheels by 90deg or -90deg
 const unsigned STEERING_SPEED = 200;

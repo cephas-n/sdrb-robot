@@ -95,7 +95,7 @@ QMC5883LCompass compass;
 //########### END LIBRARY INSTANCES ##############
 
 
-MotorController *motor_controller = new MotorController();
+MotorController* motor_controller = new MotorController();
 InfraRed front_ir;
 InfraRed left_ir;
 InfraRed right_ir;
@@ -123,7 +123,7 @@ void forward(const uint8_t motor_speed = MOTOR_SPEED, const uint16_t duration = 
   led_right.turn_off();
 
   motor_controller->set_speed(motor_speed)
-                  ->forward(duration);
+    ->forward(duration);
 }
 
 /*
@@ -135,7 +135,7 @@ void backward(const uint8_t motor_speed = MOTOR_SPEED, const uint16_t duration =
   led_right.turn_on();
 
   motor_controller->set_speed(motor_speed)
-                  ->reverse(duration);
+    ->reverse(duration);
 }
 
 /*
@@ -151,8 +151,8 @@ void turn_left(const uint8_t steering_speed = MOTOR_SPEED, const uint16_t steeri
   led_right.turn_off();
 
   motor_controller->set_speed(steering_speed)
-                  ->turn_left()
-                  ->stop_after(steering_duration);
+    ->turn_left()
+    ->stop_after(steering_duration);
 }
 
 /*
@@ -167,8 +167,8 @@ void turn_right(const uint8_t steering_speed = MOTOR_SPEED, const uint16_t steer
   led_right.turn_on();
 
   motor_controller->set_speed(steering_speed)
-                  ->turn_right()
-                  ->stop_after(steering_duration);
+    ->turn_right()
+    ->stop_after(steering_duration);
 }
 
 /*
@@ -202,12 +202,12 @@ void stop_backward_motors(const unsigned int stoppingSpeed = MOTOR_SPEED)
   then wait 2 more seconds before return void.
   thus, allowing to verify if the obstacle is still in front of the robot every 3 seconds
 */
-void run_buzzer(unsigned int duration = 500)
+void run_buzzer(unsigned int duration = 200)
 {
-  digitalWrite(Pin::BUZZER, HIGH);
+  analogWrite(Pin::BUZZER, 100);
   delay(duration);
-  digitalWrite(Pin::BUZZER, LOW);
-  delay(2000);
+  analogWrite(Pin::BUZZER, LOW);
+  delay(duration);
 }
 
 /*
@@ -650,18 +650,17 @@ double get_compass_heading()
 */
 Direction choose_side()
 {
-  Direction freeSide = NONE;
-  if (digitalRead(Pin::RIGHT_TRIG) == HIGH) // HIGH: No obstacle, LOW: obstacle
-  {
-    freeSide = LEFT;
+  Direction free_side = NONE;
+
+  if (!left_ir.check()) {
+    free_side = LEFT;
   }
 
-  if (digitalRead(Pin::LEFT_TRIG) == HIGH)
-  {
-    freeSide = RIGHT;
+  if (!right_ir.check()) {
+    free_side = RIGHT;
   }
 
-  return freeSide;
+  return free_side;
 }
 
 /*
@@ -703,86 +702,91 @@ bool obstacle_avoidance()
   while (State::obstacle == HIGH)
   {
     switch(choose_side()) {
-    case LEFT:
-      // LEFT
-      turn_right();
-      while (true) {
-        // advance
-        forward(150);
-        if (digitalRead(Pin::RIGHT_TRIG) == HIGH) break;
-        Avoidance::duration++;
-      }
+      case RIGHT:
+        // step 1: turn toward direction
+        turn_right();
 
-      Serial.println("the Robot can turn left now ============");
-      stop_forward_motors();
-      turn_left();
-      forward(MOTOR_SPEED, 1.5 * FORWARD_DURATION);
+        // setp 2: Move forward until the left side if free 
+        while (true) {
+          forward(150);
+          if (!left_ir.check()) break;
+          Avoidance::duration++;
+        }
+        stop_forward_motors();
 
-      while (true) {
-        forward(150, FORWARD_DURATION);
-        if (digitalRead(Pin::RIGHT_TRIG) == HIGH) break;
-      }
+        // step 3: turn left
+        turn_left();
+        forward(MOTOR_SPEED, 1.5 * FORWARD_DURATION);
 
-      stop_forward_motors();
-      turn_left();
+        // step 4: Move forward until the left side if free 
+        while (true) {
+          forward(150);
+          if (!left_ir.check()) break;
+        }
+        stop_forward_motors();
 
-      while (Avoidance::duration > 0) {
-        forward(150, FORWARD_DURATION);
-        Avoidance::duration--;
-      }
+        // step 5: return to  the original path accross the obstacle
+        turn_left();
+        while (Avoidance::duration > 0) {
+          forward(150);
+          Avoidance::duration--;
+        }
+        stop_forward_motors();
+        turn_right();
+        break;
 
-      stop_forward_motors();
-      turn_right();
-      run_buzzer();
-      break;
-    case RIGHT:
-      turn_left();
-      while (true) {
-        // advance
-        forward(150, FORWARD_DURATION);
-        if (digitalRead(Pin::LEFT_TRIG) == HIGH) break;
-        Avoidance::duration++;
-      }
+      case LEFT:
+        // step 1: turn toward direction
+        turn_left();
 
-      Serial.println("the Robot can turn right now ============");
+        // setp 2: Move forward until the right side is free 
+        while (true) {
+          forward(150);
+          if (!right_ir.check()) break;
+          Avoidance::duration++;
+        }
+        stop_forward_motors();
 
-      stop_forward_motors();
-      turn_right();
-      forward(MOTOR_SPEED, 1.5 * FORWARD_DURATION);
+        // step 3: turn right
+        turn_right();
+        forward(MOTOR_SPEED, 1.5 * FORWARD_DURATION);
 
-      while (true) {
-        forward(150, FORWARD_DURATION);
-        if (digitalRead(Pin::LEFT_TRIG) == HIGH) break;
-      }
+        // step 4: Move forward until the right side if free 
+        while (true) {
+          forward(150);
+          if (!right_ir.check()) break;
+        }
+        stop_forward_motors();
 
-      stop_forward_motors();
-      turn_right();
+        // step 5: return to  the original path accross the obstacle
+        turn_right();
+        while (Avoidance::duration > 0) {
+          forward(150);
+          Avoidance::duration--;
+        }
+        stop_forward_motors();
+        turn_left();
+        break;
 
-      while (Avoidance::duration > 0) {
-        forward(150, FORWARD_DURATION);
-        Avoidance::duration--;
-      }
-
-      stop_forward_motors();
-      turn_left();
-      run_buzzer();
-      break;
+      default:
+        stop_backward_motors();
     }
-    delay(60000);
+
+    run_buzzer();
     Avoidance::startTime = 0;
     Avoidance::stopTime = 0;
     Avoidance::duration = 0;
     Avoidance::returnStartTime = 0;
   }
 
-  return false;
+  return true; // obstacle avoided
 }
 
 
 //####################### ARDUINO SETUP FUNCTIONS #######################
 void setup()
 {
-    //1. SETUP PIN MODES
+  //1. SETUP PIN MODES
   pinMode(Pin::START_BUTTON, INPUT);
   pinMode(Pin::STOP_BUTTON, INPUT);
   pinMode(Pin::BUZZER, OUTPUT);
@@ -793,7 +797,7 @@ void setup()
 
   // setup motors controller
   motor_controller->setup(
-    Pin::RPWM_1, Pin::LPWM_1, Pin::REN_1, 
+    Pin::RPWM_1, Pin::LPWM_1, Pin::REN_1,
     Pin::RPWM_2, Pin::LPWM_2, Pin::REN_2
   );
 
@@ -854,52 +858,12 @@ void setup()
  *****************************************************************************
  *****************************************************************************/
 void loop() {
-  ////  0. DEBUGGING
-  //  save_navigation_data(); //save navigation history 
-  //  detectObstacle();
-  //  if(State::obstacle)
-  //  {
-  //    digitalWrite(Pin::BUZZER, HIGH);
-  //  }
-  //  else{
-  //    digitalWrite(Pin::BUZZER, LOW);
-  //  }
-  //  bluetooth_command();
-  //  obstacle_avoidance();
-  //  get_distance_from_destination();
-  //  update_gps_position();
-  //  Serial.print("Heading: ");
-  //  Serial.println(TinyGPSPlus::courseTo(gps.location.lat(), gps.location.lng(), current_destination[0], current_destination[1]));
-  //  update_gps_position();
-  //  save_navigation_data();
-  //  Serial.println("Compass: ");
-  //  Serial.println(get_compass_heading());
+  Serial.print("Distance Left: ");
+  Serial.println(left_ir.check() ? "TRUE" : "FALSE");
+  //  
+  Serial.print("Distance Right: ");
+  Serial.println(right_ir.check() ? "TRUE" : "FALSE");
 
-  //  Serial.print("Distance: ");
-  //  Serial.println(calculateDistance(Pin::FRONT_TRIG, Pin::FRONT_ECHO));
-  //  
-  // Serial.print("Distance Left: ");
-  // Serial.println(is_left_side_free());
-  // //  
-  // Serial.print("Distance Right: ");
-  // Serial.println(is_right_side_free());
-  //  
-  //  Serial.print("Obstacle: ");
-  //  Serial.println(detectObstacle());
-  //  
-  //  Serial.print("Choose side: ");
-  //  Serial.println(choose_side());
-  //  
-  //  Serial.print("Check Left side: ");
-  //  Serial.println(is_left_side_free());
-  //  
-  //  Serial.print("Check Right side: ");
-  //  Serial.println(is_right_side_free());
-  //  Serial.print("Start Button: ");
-  //  Serial.println(digitalRead(Pin::START_BUTTON));
-  //  
-  //  Serial.print("Stop Button: ");
-  //  Serial.println(digitalRead(Pin::STOP_BUTTON));
   Serial.println("=======================================DESTINATION: " + String(active_destination));
 
   Serial.println("DISTANCE FROM DESTINATION: " + String(NavigationEntry::distance));
@@ -912,24 +876,24 @@ void loop() {
     Command cmd = bluetooth_command();
     switch (cmd)
     {
-      case START:
-        State::robot = HIGH;
-        State::arrived = LOW;
-        Serial.println("START==========================");
-        delay(3000);
-        break;
-      case STOP:
-        stop_robot();
-        break;
-      case DESTINATION_ACCOUNTING:
-      case DESTINATION_CAFE:
-      case DESTINATION_LIBRARY:
-      case DESTINATION_HOME:
-        Serial.println("Destination: ACCOUNTING..............");
-        current_destination[0] = allDestinations[active_destination][0];
-        current_destination[1] = allDestinations[active_destination][1];
-        destination_is_set = true;
-        break;
+    case START:
+      State::robot = HIGH;
+      State::arrived = LOW;
+      Serial.println("START==========================");
+      delay(3000);
+      break;
+    case STOP:
+      stop_robot();
+      break;
+    case DESTINATION_ACCOUNTING:
+    case DESTINATION_CAFE:
+    case DESTINATION_LIBRARY:
+    case DESTINATION_HOME:
+      Serial.println("Destination: ACCOUNTING..............");
+      current_destination[0] = allDestinations[active_destination][0];
+      current_destination[1] = allDestinations[active_destination][1];
+      destination_is_set = true;
+      break;
     }
   }
   // END BLUETOOTH COMMAND
@@ -959,7 +923,7 @@ void loop() {
   {
     Serial.println("Robot status: WORKING");
 
-    State::obstacle = front_ir.read();
+    State::obstacle = front_ir.check();
 
     if (!State::obstacle)
     {
