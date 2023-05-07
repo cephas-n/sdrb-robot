@@ -305,21 +305,29 @@ void update_gps_position()
   {
     gps_location_found = true;
     NavigationEntry::hasStarted = true;
-    get_distance_from_destination();
   }
 }
 
 double get_distance_from_destination() {
-  if (gps_location_found) {
-    const double distance = TinyGPSPlus::distanceBetween(
-      gps.location.lat(),
-      gps.location.lng(),
-      current_destination[0],
-      current_destination[1]
-    );
+  if (!gps_location_found) return 0;
+  
+  return TinyGPSPlus::distanceBetween(
+    gps.location.lat(),
+    gps.location.lng(),
+    current_destination[0],
+    current_destination[1]
+  );
+}
 
-    NavigationEntry::distance = distance;
-  }
+double get_course_to_destination() {
+  if(!gps_location_found)  return 0;
+
+  return TinyGPSPlus::courseTo(
+    gps.location.lat(), 
+    gps.location.lng(), 
+    current_destination[0], 
+    current_destination[1]
+  );
 }
 
 /*
@@ -334,7 +342,7 @@ Direction navigation(const double destination_lat, const double destination_lng)
   update_gps_position();
   if (gps_location_found)
   {
-    int destinationHeading = TinyGPSPlus::courseTo(gps.location.lat(), gps.location.lng(), destination_lat, destination_lng);
+    int destinationHeading = get_course_to_destination();
     double destinationHeadingLow = destinationHeading - DIRECTION_CORRECTION;
     double destinationHeadingHigh = destinationHeading + DIRECTION_CORRECTION;
     int currentHeading = get_compass_heading();
@@ -347,7 +355,7 @@ Direction navigation(const double destination_lat, const double destination_lng)
 
     // check if the user has arrived
     //HAS ALREADY ARRIVED AT DESTINATION ?
-    get_distance_from_destination();
+    NavigationEntry::distance = get_distance_from_destination();
     if (gps_location_found && NavigationEntry::distance <= DESTINATION_DIST_PRECISION)
     {
       Serial.println("=======THE ROBOT HAS ARRIVED AT DESTIONATION " + String(active_destination) + "======");
@@ -747,7 +755,7 @@ void logger() {
     Serial.println("DISTINATION: id = " + String(active_destination + 1)
                   + ", lat=" + String(current_destination[0], 6) 
                   + ",  lng=" + String(current_destination[1], 6)
-                  + ",  heading=" + String(NavigationEntry::destinationHeading, 2));
+                  + ",  heading=" + String(get_course_to_destination(), 2));
     Serial.println("CURRENT POSITION: lat=" + String(gps.location.lat(), 6) 
                 + ",  lng=" + String(gps.location.lng(), 6)
                 + ",  distance=" + String(get_distance_from_destination(), 2) + " meters");
@@ -834,9 +842,10 @@ void loop() {
 
   // 0.1 WAIT FOR VALID LOCATION
   while(!gps_location_found) {
-    update_gps_position();
     Serial.println("Waiting for a valid location ...");
-    led_stop.blink(2, 100);
+    led_stop.blink(1, 100);
+    
+    update_gps_position();
   }
 
   // 1. BLUETOOTH COMMAND
