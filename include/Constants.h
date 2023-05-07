@@ -64,4 +64,7 @@ enum Direction
 
 // number of motors per motor driver
 const int MOTORS_PER_MOTOR_DRIVER = 2;
+
+// sampling time in milliseconds
+const uint16_t SAMPLING_TIME = 5000; 
 #endif

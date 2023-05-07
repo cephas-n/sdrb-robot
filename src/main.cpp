@@ -174,7 +174,7 @@ void turn_right(const uint8_t steering_speed = MOTOR_SPEED, const uint16_t steer
    while turning in forward direction
 
 */
-void stop_forward_motors(const unsigned int stoppingSpeed = MOTOR_SPEED)
+void stop_all_motors()
 {
   led_left.turn_off();
   led_right.turn_off();
@@ -182,25 +182,13 @@ void stop_forward_motors(const unsigned int stoppingSpeed = MOTOR_SPEED)
   motor_controller->stop();
 }
 
-/*
-   Stop all the motors
-   while turning in backward direction
-
-*/
-void stop_backward_motors(const unsigned int stoppingSpeed = MOTOR_SPEED)
-{
-  led_left.turn_off();
-  led_right.turn_off();
-
-  motor_controller->stop();
-}
 
 /*
   this function runs BUZZER for 1 seconds,
   then wait 2 more seconds before return void.
   thus, allowing to verify if the obstacle is still in front of the robot every 3 seconds
 */
-void run_buzzer(unsigned int duration = 300)
+void run_buzzer(const uint16_t duration = 300)
 {
   digitalWrite(Pin::BUZZER, HIGH);
   delay(duration);
@@ -218,8 +206,7 @@ Command bluetooth_command()
 {
   char command = Serial.read();
 
-  Serial.print("======================Bluetooth Command:");
-  Serial.println(command);
+  Serial.println("BLEUTOOTH CMD: " + String(command));
 
   switch (command)
   {
@@ -287,8 +274,6 @@ void stop_robot()
   led_right.turn_off();
   led_active.turn_off();
   led_stop.turn_on();
-
-  Serial.println("Robot status: SLEEPING ......");
 }
 
 /*
@@ -320,11 +305,6 @@ void update_gps_position()
   {
     gps_location_found = true;
     NavigationEntry::hasStarted = true;
-    Serial.print("Robot current position (latitude, longitude): ");
-    Serial.print(gps.location.lat());
-    Serial.print(",");
-    Serial.println(gps.location.lng());
-
     get_distance_from_destination();
   }
 }
@@ -349,7 +329,7 @@ void get_distance_from_destination() {
    It returns the direction the robot should follow
 
 */
-Direction navigation(double destination_lat, double destination_lng)
+Direction navigation(const double destination_lat, const double destination_lng)
 {
   update_gps_position();
   if (gps_location_found)
@@ -370,12 +350,12 @@ Direction navigation(double destination_lat, double destination_lng)
     get_distance_from_destination();
     if (gps_location_found && NavigationEntry::distance <= DESTINATION_DIST_PRECISION)
     {
-      Serial.println("============================== THE ROBOT HAS ARRIVED AT DESTIONATION " + String(active_destination) + "==================");
+      Serial.println("=======THE ROBOT HAS ARRIVED AT DESTIONATION " + String(active_destination) + "======");
       State::robot = LOW;
       State::arrived = true;      
     }
 
-
+    Serial.print("STEERING: ");
     if (currentHeading >= destinationHeadingLow && currentHeading <= destinationHeadingHigh)
     {
       Serial.println("Foward");
@@ -531,12 +511,9 @@ bool save_navigation_data()
   {
     NavigationEntry::filename = filename;
     filenameIsValid = true;
-    Serial.print("MISSION FILE NAME: ");
-    Serial.println(filename);
   }
   else if (!filenameIsValid)
   {
-    //    Serial.print("MISSION FILE NAME: " + filename);
     return false;
   }
 
@@ -552,11 +529,9 @@ bool save_navigation_data()
 
    this function write data to sd memory
 */
-void save_data(const char* filename, const String& data)
+void save_data(const String &filename, const String& data)
 {
-  Serial.print("SD Card: Opening '");
-  Serial.print(filename);
-  Serial.println('\'');
+  Serial.println("SD Card: Opening '" + filename + "'");
 
   // open file
   File file = SD.open(filename, FILE_WRITE);
@@ -569,58 +544,13 @@ void save_data(const char* filename, const String& data)
   else
   {
     // error
-    Serial.print("SD Card: could'nt open the file '");
-    Serial.print(filename);
-    Serial.println('\'');
+    Serial.println("SD Card: could'nt open the file '" + filename);
   }
 
   file.close();
-  Serial.print("SD Card: file '");
-  Serial.print(filename);
-  Serial.println("' closed");
+  Serial.println("SD Card: " + filename + " closed");
 }
 
-/*
-   Load data
-
-   this function reads data from SD memory
-
-*/
-void loadData(const char* filename, String& data)
-{
-  Serial.print("SD Card: Opening '");
-  Serial.print(filename);
-  Serial.println("' ...");
-
-  // open file
-  File file = SD.open(filename, FILE_READ);
-
-  if (file)
-  {
-    Serial.print("SD Card: Reading file '");
-    Serial.print(filename);
-    Serial.println("'");
-
-    while (file.available())
-    {
-      data += String(file.readString());
-    }
-
-    Serial.println("SD Card: data loaded successfully");
-  }
-  else
-  {
-    // error
-    Serial.print("SD Card: could'nt open the file '");
-    Serial.print(filename);
-    Serial.println('\'');
-  }
-
-  file.close();
-  Serial.print("SD Card: file '");
-  Serial.print(filename);
-  Serial.println("' closed");
-}
 
 /*
    Get compass heading with respect to North
@@ -670,7 +600,7 @@ Direction choose_side()
 */
 bool obstacle_avoidance()
 {
-  Serial.println("avoidance started");
+  Serial.println("Obstacle Avoidance Started");
   
   switch(choose_side()) {
     case RIGHT:
@@ -681,7 +611,7 @@ bool obstacle_avoidance()
       while (true) {
         // check if there is an obstacle in front
         if(front_ir.check()) {
-          stop_backward_motors();
+          stop_all_motors();
           return false;
         }
 
@@ -689,13 +619,13 @@ bool obstacle_avoidance()
         if (!left_ir.check()) break;
         Avoidance::duration++;
       }
-      stop_forward_motors();
+      stop_all_motors();
 
       // step 3: turn left
       turn_left();
       // check if there is an obstacle in front
       if(front_ir.check()) {
-        stop_backward_motors();
+        stop_all_motors();
         return false;
       }
       forward(120, 1.5 * FORWARD_DURATION);
@@ -704,28 +634,28 @@ bool obstacle_avoidance()
       while (true) {
         // check if there is an obstacle in front
         if(front_ir.check()) {
-          stop_backward_motors();
+          stop_all_motors();
           return false;
         }
 
         forward(120);
         if (!left_ir.check()) break;
       }
-      stop_forward_motors();
+      stop_all_motors();
 
       // step 5: return to  the original path accross the obstacle
       turn_left();
       while (Avoidance::duration > 0) {
         // check if there is an obstacle in front
         if(front_ir.check()) {
-          stop_backward_motors();
+          stop_all_motors();
           return false;
         }
 
         forward(120);
         Avoidance::duration--;
       }
-      stop_forward_motors();
+      stop_all_motors();
       turn_right();
       break;
 
@@ -737,7 +667,7 @@ bool obstacle_avoidance()
       while (true) {
         // check if there is an obstacle in front
         if(front_ir.check()) {
-          stop_backward_motors();
+          stop_all_motors();
           return false;
         }
 
@@ -745,13 +675,13 @@ bool obstacle_avoidance()
         if (!right_ir.check()) break;
         Avoidance::duration++;
       }
-      stop_forward_motors();
+      stop_all_motors();
 
       // step 3: turn right
       turn_right();
       // check if there is an obstacle in front
       if(front_ir.check()) {
-        stop_backward_motors();
+        stop_all_motors();
         return false;
       }
       forward(120, 1.5 * FORWARD_DURATION);
@@ -760,33 +690,33 @@ bool obstacle_avoidance()
       while (true) {
         // check if there is an obstacle in front
         if(front_ir.check()) {
-          stop_backward_motors();
+          stop_all_motors();
           return false;
         }
 
         forward(120);
         if (!right_ir.check()) break;
       }
-      stop_forward_motors();
+      stop_all_motors();
 
       // step 5: return to  the original path accross the obstacle
       turn_right();
       while (Avoidance::duration > 0) {
         // check if there is an obstacle in front
         if(front_ir.check()) {
-          stop_backward_motors();
+          stop_all_motors();
           return false;
         }
 
         forward(120);
         Avoidance::duration--;
       }
-      stop_forward_motors();
+      stop_all_motors();
       turn_left();
       break;
 
     default:
-      stop_forward_motors();
+      stop_all_motors();
   }
 
   // reset avoidance entries
@@ -796,6 +726,33 @@ bool obstacle_avoidance()
   Avoidance::returnStartTime = 0;
 
   return true; // obstacle avoided
+}
+
+void logger() {
+  // every 5seconds
+  static uint32_t last_update = millis();
+  if(millis() - last_update >= SAMPLING_TIME) {
+    // Robot
+    Serial.println("ROBOT STATUS: " + String(State::robot ? "Working" : "Sleeping zzz..."));
+    Serial.println("HAS ARRIVED AT DESTINATION: " + String(State::arrived ? "YES" : "NO"));
+
+    // Infrared sensors
+    Serial.println("FRONT IR: " + String(front_ir.check() ? "detected" : "-"));
+    Serial.println("LEFT IR: " + String(left_ir.check() ? "detected" : "-"));
+    Serial.println("RIGHT IR: " + String(right_ir.check() ? "detected" : "-"));
+
+    // Navigation
+    Serial.println("DISTINATION: id = " + String(active_destination + 1)
+                  + ", lat=" + String(current_destination[0], 6) 
+                  + ",  lng=" + String(current_destination[1], 6)
+                  + ",  heading=" + String(NavigationEntry::destinationHeading, 2));
+    Serial.println("CURRENT POSITION: lat=" + String(gps.location.lat(), 6) 
+                + ",  lng=" + String(gps.location.lng(), 6)
+                + ",  distance=" + String(NavigationEntry::distance, 2) + " meters");
+    Serial.println("CURRENT HEADING:" + String(NavigationEntry::compassHeading, 6));
+
+    Serial.println("MISSION FILE NAME: " + String(NavigationEntry::filename));
+  }
 }
 
 
@@ -870,20 +827,19 @@ void setup()
  *****************************************************************************
  *****************************************************************************/
 void loop() {
-  // 0. DEBUG
-  Serial.println("FRONT IR: " + String(front_ir.check() ? "detected" : "-"));
-  Serial.println("LEFT IR: " + String(left_ir.check() ? "detected" : "-"));
-  Serial.println("RIGHT IR: " + String(right_ir.check() ? "detected" : "-"));
+  // 0. LOGGER
+  logger();
+
   // 1. BLUETOOTH COMMAND
   if (Serial.available() > 0)
   {
     Command cmd = bluetooth_command();
+    Serial.println("BLUETOOTH COMMAND:" + String(cmd));
     switch (cmd)
     {
       case START:
         State::robot = HIGH;
         State::arrived = LOW;
-        Serial.println("START==========================");
         delay(3000);
         break;
       case STOP:
@@ -893,7 +849,6 @@ void loop() {
       case DESTINATION_CAFE:
       case DESTINATION_LIBRARY:
       case DESTINATION_HOME:
-        Serial.println("Destination: ACCOUNTING..............");
         current_destination[0] = allDestinations[active_destination][0];
         current_destination[1] = allDestinations[active_destination][1];
         destination_is_set = true;
@@ -924,8 +879,6 @@ void loop() {
     led_active.turn_on();
     led_stop.turn_off();
 
-    Serial.println("Robot status: WORKING");
-
     State::obstacle = front_ir.check();
 
     if (!State::obstacle)
@@ -954,10 +907,9 @@ void loop() {
     else
     {
       //3.3. OBSTACLE AVOIDANCE       
-      stop_forward_motors();
+      stop_all_motors();
       run_buzzer();
       obstacle_avoidance();
-      led_stop.blink(3);
     }
     
     // END ROBOT ACTIVE MODE
