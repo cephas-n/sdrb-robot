@@ -245,13 +245,12 @@ class Led {
     }
 
     void blink(uint8_t repeat = 0, uint16_t interval = 500) {
-      for(size_t i = 0; i >= repeat; i++) {
-        this->turn_off();
+      for(int i = repeat; i > 0; i++) {
         this->turn_on();
         delay(interval);
         this->turn_off();
 
-        if(repeat > 0) delay(interval);
+        if(i > 1) delay(interval);
       }
     }
 };

@@ -24,7 +24,7 @@ namespace Pin
     const uint8_t LEFT_LED = 30;
     const uint8_t RIGHT_LED = 32;
     const uint8_t STOP_LED = 34;
-    const uint8_t ACTIVE_LED = 40;
+    const uint8_t ACTIVE_LED = 48;
 };
 //########### END PINS DEFINITION ##############
 #endif

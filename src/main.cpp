@@ -203,11 +203,11 @@ void stop_backward_motors(const unsigned int stoppingSpeed = MOTOR_SPEED)
   then wait 2 more seconds before return void.
   thus, allowing to verify if the obstacle is still in front of the robot every 3 seconds
 */
-void run_buzzer(unsigned int duration = 200)
+void run_buzzer(unsigned int duration = 300)
 {
-  analogWrite(Pin::BUZZER, 100);
+  digitalWrite(Pin::BUZZER, HIGH);
   delay(duration);
-  analogWrite(Pin::BUZZER, LOW);
+  digitalWrite(Pin::BUZZER, LOW);
   delay(duration);
 }
 
@@ -676,131 +676,128 @@ Direction choose_side()
 bool obstacle_avoidance()
 {
   Serial.println("avoidance started");
-  while (State::obstacle == HIGH)
-  {
-    switch(choose_side()) {
-      case RIGHT:
-        // step 1: turn toward direction
-        turn_right();
+  
+  switch(choose_side()) {
+    case RIGHT:
+      // step 1: turn toward direction
+      turn_right();
 
-        // setp 2: Move forward until the left side if free 
-        while (true) {
-          // check if there is an obstacle in front
-          if(front_ir.check()) {
-            stop_backward_motors();
-            return false;
-          }
-
-          forward(120);
-          if (!left_ir.check()) break;
-          Avoidance::duration++;
-        }
-        stop_forward_motors();
-
-        // step 3: turn left
-        turn_left();
+      // setp 2: Move forward until the left side if free 
+      while (true) {
         // check if there is an obstacle in front
         if(front_ir.check()) {
           stop_backward_motors();
           return false;
         }
-        forward(120, 1.5 * FORWARD_DURATION);
 
-        // step 4: Move forward until the left side if free 
-        while (true) {
-          // check if there is an obstacle in front
-          if(front_ir.check()) {
-            stop_backward_motors();
-            return false;
-          }
+        forward(120);
+        if (!left_ir.check()) break;
+        Avoidance::duration++;
+      }
+      stop_forward_motors();
 
-          forward(120);
-          if (!left_ir.check()) break;
-        }
-        stop_forward_motors();
-
-        // step 5: return to  the original path accross the obstacle
-        turn_left();
-        while (Avoidance::duration > 0) {
-          // check if there is an obstacle in front
-          if(front_ir.check()) {
-            stop_backward_motors();
-            return false;
-          }
-
-          forward(120);
-          Avoidance::duration--;
-        }
-        stop_forward_motors();
-        turn_right();
-        break;
-
-      case LEFT:
-        // step 1: turn toward direction
-        turn_left();
-
-        // setp 2: Move forward until the right side is free 
-        while (true) {
-          // check if there is an obstacle in front
-          if(front_ir.check()) {
-            stop_backward_motors();
-            return false;
-          }
-
-          forward(120);
-          if (!right_ir.check()) break;
-          Avoidance::duration++;
-        }
-        stop_forward_motors();
-
-        // step 3: turn right
-        turn_right();
-        // check if there is an obstacle in front
-        if(front_ir.check()) {
-          stop_backward_motors();
-          return false;
-        }
-        forward(120, 1.5 * FORWARD_DURATION);
-
-        // step 4: Move forward until the right side if free 
-        while (true) {
-          // check if there is an obstacle in front
-          if(front_ir.check()) {
-            stop_backward_motors();
-            return false;
-          }
-
-          forward(120);
-          if (!right_ir.check()) break;
-        }
-        stop_forward_motors();
-
-        // step 5: return to  the original path accross the obstacle
-        turn_right();
-        while (Avoidance::duration > 0) {
-          // check if there is an obstacle in front
-          if(front_ir.check()) {
-            stop_backward_motors();
-            return false;
-          }
-
-          forward(120);
-          Avoidance::duration--;
-        }
-        stop_forward_motors();
-        turn_left();
-        break;
-
-      default:
-        backward(120, 200);
+      // step 3: turn left
+      turn_left();
+      // check if there is an obstacle in front
+      if(front_ir.check()) {
         stop_backward_motors();
-    }
+        return false;
+      }
+      forward(120, 1.5 * FORWARD_DURATION);
 
-    Avoidance::startTime = 0;
-    Avoidance::stopTime = 0;
-    Avoidance::duration = 0;
-    Avoidance::returnStartTime = 0;
+      // step 4: Move forward until the left side if free 
+      while (true) {
+        // check if there is an obstacle in front
+        if(front_ir.check()) {
+          stop_backward_motors();
+          return false;
+        }
+
+        forward(120);
+        if (!left_ir.check()) break;
+      }
+      stop_forward_motors();
+
+      // step 5: return to  the original path accross the obstacle
+      turn_left();
+      while (Avoidance::duration > 0) {
+        // check if there is an obstacle in front
+        if(front_ir.check()) {
+          stop_backward_motors();
+          return false;
+        }
+
+        forward(120);
+        Avoidance::duration--;
+      }
+      stop_forward_motors();
+      turn_right();
+      break;
+
+    case LEFT:
+      // step 1: turn toward direction
+      turn_left();
+
+      // setp 2: Move forward until the right side is free 
+      while (true) {
+        // check if there is an obstacle in front
+        if(front_ir.check()) {
+          stop_backward_motors();
+          return false;
+        }
+
+        forward(120);
+        if (!right_ir.check()) break;
+        Avoidance::duration++;
+      }
+      stop_forward_motors();
+
+      // step 3: turn right
+      turn_right();
+      // check if there is an obstacle in front
+      if(front_ir.check()) {
+        stop_backward_motors();
+        return false;
+      }
+      forward(120, 1.5 * FORWARD_DURATION);
+
+      // step 4: Move forward until the right side if free 
+      while (true) {
+        // check if there is an obstacle in front
+        if(front_ir.check()) {
+          stop_backward_motors();
+          return false;
+        }
+
+        forward(120);
+        if (!right_ir.check()) break;
+      }
+      stop_forward_motors();
+
+      // step 5: return to  the original path accross the obstacle
+      turn_right();
+      while (Avoidance::duration > 0) {
+        // check if there is an obstacle in front
+        if(front_ir.check()) {
+          stop_backward_motors();
+          return false;
+        }
+
+        forward(120);
+        Avoidance::duration--;
+      }
+      stop_forward_motors();
+      turn_left();
+      break;
+
+    default:
+      stop_forward_motors();
   }
+
+  Avoidance::startTime = 0;
+  Avoidance::stopTime = 0;
+  Avoidance::duration = 0;
+  Avoidance::returnStartTime = 0;
 
   return true; // obstacle avoided
 }
@@ -877,6 +874,10 @@ void setup()
  *****************************************************************************
  *****************************************************************************/
 void loop() {
+  // 0. DEBUG
+  Serial.println("FRONT IR: " + String(front_ir.check() ? "detected" : "-"));
+  Serial.println("LEFT IR: " + String(left_ir.check() ? "detected" : "-"));
+  Serial.println("RIGHT IR: " + String(right_ir.check() ? "detected" : "-"));
   // 1. BLUETOOTH COMMAND
   if (Serial.available() > 0)
   {
@@ -913,23 +914,14 @@ void loop() {
   {
     State::robot = HIGH;
   }
-
-  if (State::robot == LOW)
-  {
-    stop_robot();
-    digitalWrite(Pin::ACTIVE_LED, LOW);
-    digitalWrite(Pin::STOP_LED, HIGH);
-  }
-  else
-  {
-    digitalWrite(Pin::STOP_LED, LOW);
-    digitalWrite(Pin::ACTIVE_LED, LOW);
-  }
   //END MANUAL COMMAND
 
   // 3. ROBOT ACTIVE MODE
   if (State::robot == HIGH)
   {
+    led_active.turn_on();
+    led_stop.turn_off();
+
     Serial.println("Robot status: WORKING");
 
     State::obstacle = front_ir.check();
@@ -939,18 +931,20 @@ void loop() {
       //3.1.  AUTONOMOUS NAVIGATION
       switch (navigation(current_destination[0], current_destination[1]))
       {
-      case LEFT:
-        turn_left();
-        delay(200);
-        break;
-      case RIGHT:
-        turn_right();
-        delay(200);
-        break;
-      case FRONT:
-        forward();
-        break;
-        forward(100);
+        case LEFT:
+          turn_left();
+          delay(200);
+          break;
+        case RIGHT:
+          turn_right();
+          delay(200);
+          break;
+        case FRONT:
+          forward();
+          break;
+          forward(100);
+        default:
+          Serial.println("Searching direction ...");
       }
       save_navigation_data(); //save navigation history 
       //END AUTONOMOUS NAVIGATION
@@ -960,10 +954,16 @@ void loop() {
       //3.3. OBSTACLE AVOIDANCE       
       stop_forward_motors();
       run_buzzer();
-      led_stop.blink(2);
       obstacle_avoidance();
+      led_stop.blink(3);
     }
   }
+  else{
+    stop_robot();
+    led_active.turn_off();
+    led_stop.turn_on();
+  }
+
   // END ROBOT ACTIVE MODE
 }
 
