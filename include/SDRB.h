@@ -168,7 +168,7 @@ class MotorController {
       return this;
     }
 
-    MotorController *stop_when(bool (*callback)()) {
+    MotorController *stop_when(bool callback()) {
       if(callback()) {
         digitalWrite(34, HIGH);
         this->stop(); 

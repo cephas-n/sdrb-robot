@@ -25,7 +25,7 @@ const unsigned NAVIGATION_STEERING_SPEED = 200;
 const int FORWARD_DURATION = 500;
 
 // compass heading correction/tolerance (degrees)
-const int DIRECTION_CORRECTION = 10;
+const int DIRECTION_CORRECTION = 15;
 
 // GPS latitude correction/tolerance (degrees)
 const int GPS_LATITUDE_CORRECTION = 0;

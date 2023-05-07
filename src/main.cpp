@@ -396,12 +396,14 @@ Direction navigation(const double destination_lat, const double destination_lng)
 
           //update heading
           currentHeading = get_compass_heading();
-          destinationHeading = TinyGPSPlus::courseTo(gps.location.lat(), gps.location.lng(), destination_lat, destination_lng);
+          destinationHeading = get_course_to_destination();
 
           Serial.println("Turn Right");
           NavigationEntry::steering = 'r';
-          turn_right(NAVIGATION_STEERING_SPEED);
-          delay(100);
+
+          motor_controller->set_speed(NAVIGATION_STEERING_SPEED)
+              ->turn_right()
+              ->stop_when([](){ return front_ir.check(); });
         }
         return NONE;
       }
@@ -419,12 +421,13 @@ Direction navigation(const double destination_lat, const double destination_lng)
 
             //update heading
             currentHeading = get_compass_heading();
-            destinationHeading = TinyGPSPlus::courseTo(gps.location.lat(), gps.location.lng(), destination_lat, destination_lng);
-
+            destinationHeading = get_course_to_destination();
             Serial.println("Turn Left");
             NavigationEntry::steering = 'l';
-            turn_left(NAVIGATION_STEERING_SPEED);
-            delay(100);
+
+            motor_controller->set_speed(NAVIGATION_STEERING_SPEED)
+                ->turn_left()
+                ->stop_when([](){ return front_ir.check(); });
           }
         }
         if ((destinationHeadingLow - currentHeading) > 180)
@@ -439,12 +442,14 @@ Direction navigation(const double destination_lat, const double destination_lng)
 
             //update heading
             currentHeading = get_compass_heading();
-            destinationHeading = TinyGPSPlus::courseTo(gps.location.lat(), gps.location.lng(), destination_lat, destination_lng);
+            destinationHeading = get_course_to_destination();
 
             Serial.println("Turn Right");
-            turn_right(NAVIGATION_STEERING_SPEED);
             NavigationEntry::steering = 'r';
-            delay(100);
+
+            motor_controller->set_speed(NAVIGATION_STEERING_SPEED)
+                ->turn_right()
+                ->stop_when([](){ return front_ir.check(); });
           }
         }
         return NONE;
@@ -461,12 +466,14 @@ Direction navigation(const double destination_lat, const double destination_lng)
 
           //update heading
           currentHeading = get_compass_heading();
-          destinationHeading = TinyGPSPlus::courseTo(gps.location.lat(), gps.location.lng(), destination_lat, destination_lng);
+          destinationHeading = get_course_to_destination();
 
           Serial.println("Turn Left");
           NavigationEntry::steering = 'l';
-          turn_left(NAVIGATION_STEERING_SPEED);
-          delay(100);
+          
+          motor_controller->set_speed(NAVIGATION_STEERING_SPEED)
+            ->turn_left()
+            ->stop_when([]{ return front_ir.check(); });
         }
         return NONE;
       }
