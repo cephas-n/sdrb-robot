@@ -85,7 +85,7 @@ class MotorController {
     MotorDriver *driver_right = new MotorDriver();
   public:
     MotorController() = default;
-    ~MotorController() = default;
+
     void setup(
       const uint8_t positive_pin_left, 
       const uint8_t negative_pin_left, 
@@ -162,6 +162,22 @@ class MotorController {
 
     MotorController *stop_after(uint32_t time) {
       delay(time);
+      this->stop();
+
+      return this;
+    }
+
+    MotorController *stop_when(bool (*callback)()) {
+      if(callback()) {
+        digitalWrite(34, HIGH);
+        this->stop(); 
+      }
+
+      return this;
+    }
+
+
+    void stop() {
       for(int speed = MOTOR_SPEED; speed > 100; speed--) {
         driver_left->set_speed(speed);
         driver_right->set_speed(speed);
@@ -170,24 +186,13 @@ class MotorController {
 
       driver_left->stop();
       driver_right->stop();
-
-      return this;
     }
 
-    MotorController *stop_when(bool (*callback)()) {
-      if(callback()) {
-        driver_left->stop();
-        driver_right->stop();
-      }
-
-      return this;
-    }
-
-
-    void stop() {
-      driver_left->stop();
-      driver_right->stop();
-    }
+    // destructor
+    ~MotorController() {
+      delete driver_left;
+      delete driver_right;
+    };
 };
 
 

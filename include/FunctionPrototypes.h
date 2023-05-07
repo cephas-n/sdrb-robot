@@ -14,4 +14,5 @@ double get_compass_heading();
 void get_distance_from_destination();
 void save_data(const char *filename, const String &entry);
 void turn_off_Robot();
+inline bool detect_obstacle();
 #endif
