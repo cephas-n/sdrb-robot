@@ -142,7 +142,7 @@ void backward(const uint8_t motor_speed = MOTOR_SPEED, const uint16_t duration =
    Right motors (2) ON
 
 */
-void turn_left(const uint8_t steering_speed = MOTOR_SPEED, const uint16_t steering_duration = STEERING_DURATION)
+void turn_left(const uint8_t steering_speed = MOTOR_SPEED, const uint16_t steering_duration = 0)
 {
   // indicators
   led_left.turn_on();
@@ -158,7 +158,7 @@ void turn_left(const uint8_t steering_speed = MOTOR_SPEED, const uint16_t steeri
    Left motors (1) OFF
    Right motors (2) ON
 */
-void turn_right(const uint8_t steering_speed = MOTOR_SPEED, const uint16_t steering_duration = STEERING_DURATION)
+void turn_right(const uint8_t steering_speed = MOTOR_SPEED, const uint16_t steering_duration = 0)
 {
   // indicators
   led_left.turn_off();
@@ -615,7 +615,7 @@ bool obstacle_avoidance()
   switch(choose_side()) {
     case RIGHT:
       // step 1: turn toward direction
-      turn_right();
+      turn_right(MOTOR_SPEED, STEERING_DURATION);
 
       // setp 2: Move forward until the left side if free 
       while (true) {
@@ -632,7 +632,7 @@ bool obstacle_avoidance()
       stop_all_motors();
 
       // step 3: turn left
-      turn_left();
+      turn_left(MOTOR_SPEED, STEERING_DURATION);
       // check if there is an obstacle in front
       if(front_ir.check()) {
         stop_all_motors();
@@ -654,7 +654,7 @@ bool obstacle_avoidance()
       stop_all_motors();
 
       // step 5: return to  the original path accross the obstacle
-      turn_left();
+      turn_left(MOTOR_SPEED, STEERING_DURATION);
       while (Avoidance::duration > 0) {
         // check if there is an obstacle in front
         if(front_ir.check()) {
@@ -666,12 +666,12 @@ bool obstacle_avoidance()
         Avoidance::duration--;
       }
       stop_all_motors();
-      turn_right();
+      turn_right(MOTOR_SPEED, STEERING_DURATION);
       break;
 
     case LEFT:
       // step 1: turn toward direction
-      turn_left();
+      turn_left(MOTOR_SPEED, STEERING_DURATION);
 
       // setp 2: Move forward until the right side is free 
       while (true) {
@@ -688,7 +688,7 @@ bool obstacle_avoidance()
       stop_all_motors();
 
       // step 3: turn right
-      turn_right();
+      turn_right(MOTOR_SPEED, STEERING_DURATION);
       // check if there is an obstacle in front
       if(front_ir.check()) {
         stop_all_motors();
@@ -710,7 +710,7 @@ bool obstacle_avoidance()
       stop_all_motors();
 
       // step 5: return to  the original path accross the obstacle
-      turn_right();
+      turn_right(MOTOR_SPEED, STEERING_DURATION);
       while (Avoidance::duration > 0) {
         // check if there is an obstacle in front
         if(front_ir.check()) {
@@ -722,7 +722,7 @@ bool obstacle_avoidance()
         Avoidance::duration--;
       }
       stop_all_motors();
-      turn_left();
+      turn_left(MOTOR_SPEED, STEERING_DURATION);
       break;
 
     default:
@@ -844,7 +844,7 @@ void loop() {
   while(!gps_location_found) {
     Serial.println("Waiting for a valid location ...");
     led_stop.blink(1, 100);
-    
+
     update_gps_position();
   }
 
