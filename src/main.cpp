@@ -57,8 +57,6 @@ Cephas Naweji, Abel Tshimbu, Eliane Nsenga, Caleb Bahaya, Sarah Musinde, Mohamme
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
-#include <string.h>
-#include <ctype.h>
 
 // Custom  Headers
 #include <Pins.h>
@@ -75,7 +73,6 @@ Cephas Naweji, Abel Tshimbu, Eliane Nsenga, Caleb Bahaya, Sarah Musinde, Mohamme
 //########### DESTINATION ##############
 int active_destination = 0;
 bool destination_is_set = false;
-int active_destination_distance = 0;
 double current_destination[2]  // default: HOME
 {
   allDestinations[0][0],
@@ -260,6 +257,8 @@ Command bluetooth_command()
     //invalid or no command
     return VOID;
   }
+
+  return VOID;
 }
 
 
@@ -353,7 +352,6 @@ void get_distance_from_destination() {
 Direction navigation(double destination_lat, double destination_lng)
 {
   update_gps_position();
-
   if (gps_location_found)
   {
     int destinationHeading = TinyGPSPlus::courseTo(gps.location.lat(), gps.location.lng(), destination_lat, destination_lng);
@@ -361,29 +359,22 @@ Direction navigation(double destination_lat, double destination_lng)
     double destinationHeadingHigh = destinationHeading + DIRECTION_CORRECTION;
     int currentHeading = get_compass_heading();
 
-    //calculate destination distance
-    if (active_destination_distance <= 1)
-    {
-      active_destination_distance = TinyGPSPlus::distanceBetween(gps.location.lat(), gps.location.lng(), destination_lat, destination_lng); //meter
-    }
-
-    // check if the user has arrived
-      //HAS ALREADY ARRIVED AT DESTINATION ?
-    get_distance_from_destination();
-    if (gps_location_found && NavigationEntry::distance <= DESTINATION_DIST_PRECISION)
-    {
-      Serial.println("============================== THE ROBOT HAS ARRIVED AT DESTIONATION " + String(active_destination) + "==================");
-      State::robot = LOW;
-      State::arrived = true;
-      run_buzzer(3000);
-    }
-
-
     //save navigation data
     NavigationEntry::latitude = gps.location.isValid() ? gps.location.lat() : -1.00;
     NavigationEntry::longitude = gps.location.isValid() ? gps.location.lng() : -1.00;
     NavigationEntry::destinationHeading = destinationHeading;
     NavigationEntry::compassHeading = currentHeading;
+
+    // check if the user has arrived
+    //HAS ALREADY ARRIVED AT DESTINATION ?
+    get_distance_from_destination();
+    if (gps_location_found && NavigationEntry::distance <= DESTINATION_DIST_PRECISION)
+    {
+      Serial.println("============================== THE ROBOT HAS ARRIVED AT DESTIONATION " + String(active_destination) + "==================");
+      State::robot = LOW;
+      State::arrived = true;      
+    }
+
 
     if (currentHeading >= destinationHeadingLow && currentHeading <= destinationHeadingHigh)
     {
@@ -498,6 +489,10 @@ Direction navigation(double destination_lat, double destination_lng)
       return NONE;
     }
   }
+
+  Serial.println("Waiting for GPS signal ...");
+
+  return NONE;
 }
 
 
@@ -794,6 +789,7 @@ bool obstacle_avoidance()
       stop_forward_motors();
   }
 
+  // reset avoidance entries
   Avoidance::startTime = 0;
   Avoidance::stopTime = 0;
   Avoidance::duration = 0;
@@ -917,8 +913,14 @@ void loop() {
   //END MANUAL COMMAND
 
   // 3. ROBOT ACTIVE MODE
-  if (State::robot == HIGH)
+  if(State::arrived) 
   {
+    // robot has arrived at destination
+    led_stop.blink(3, 1000);
+  }
+  else if (State::robot == HIGH)
+  {
+    // start robot
     led_active.turn_on();
     led_stop.turn_off();
 
@@ -957,14 +959,16 @@ void loop() {
       obstacle_avoidance();
       led_stop.blink(3);
     }
-  }
-  else{
+    
+    // END ROBOT ACTIVE MODE
+  } 
+  else
+  {
+    // stop robot
     stop_robot();
     led_active.turn_off();
     led_stop.turn_on();
   }
-
-  // END ROBOT ACTIVE MODE
 }
 
 
