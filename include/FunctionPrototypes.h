@@ -11,7 +11,7 @@
 #ifndef _FUNCTION_PROTOTYPES_H_
 #define _FUNCTION_PROTOTYPES_H_
 double get_compass_heading();
-void get_distance_from_destination();
+double get_distance_from_destination();
 void save_data(const String &filename, const String &entry);
 void turn_off_robot();
 void turn_left(const uint8_t steering_speed, const uint16_t steering_duration);

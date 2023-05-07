@@ -301,7 +301,7 @@ void update_gps_position()
     gps.encode(gps_serial.read());
   }
 
-  if (gps.location.isValid())
+  if (gps.location.isUpdated())
   {
     gps_location_found = true;
     NavigationEntry::hasStarted = true;
@@ -309,7 +309,7 @@ void update_gps_position()
   }
 }
 
-void get_distance_from_destination() {
+double get_distance_from_destination() {
   if (gps_location_found) {
     const double distance = TinyGPSPlus::distanceBetween(
       gps.location.lat(),
@@ -750,8 +750,8 @@ void logger() {
                   + ",  heading=" + String(NavigationEntry::destinationHeading, 2));
     Serial.println("CURRENT POSITION: lat=" + String(gps.location.lat(), 6) 
                 + ",  lng=" + String(gps.location.lng(), 6)
-                + ",  distance=" + String(NavigationEntry::distance, 2) + " meters");
-    Serial.println("CURRENT HEADING:" + String(NavigationEntry::compassHeading, 6));
+                + ",  distance=" + String(get_distance_from_destination(), 2) + " meters");
+    Serial.println("CURRENT HEADING:" + String(get_compass_heading(), 6));
 
     Serial.println("MISSION FILE NAME: " + String(NavigationEntry::filename));
   }
@@ -831,6 +831,13 @@ void setup()
 void loop() {
   // 0. LOGGER
   logger();
+
+  // 0.1 WAIT FOR VALID LOCATION
+  while(!gps_location_found) {
+    update_gps_position();
+    Serial.println("Waiting for a valid location ...");
+    led_stop.blink(2, 100);
+  }
 
   // 1. BLUETOOTH COMMAND
   if (Serial.available() > 0)
