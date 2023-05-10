@@ -402,7 +402,7 @@ Direction navigation(const double destination_lat, const double destination_lng)
           NavigationEntry::steering = 'r';
 
           motor_controller->set_speed(NAVIGATION_STEERING_SPEED)
-              ->turn_right()
+              ->turn_left()
               ->stop_when([](){ return front_ir.check(); });
         }
         return NONE;
@@ -426,7 +426,7 @@ Direction navigation(const double destination_lat, const double destination_lng)
             NavigationEntry::steering = 'l';
 
             motor_controller->set_speed(NAVIGATION_STEERING_SPEED)
-                ->turn_left()
+                ->turn_right()
                 ->stop_when([](){ return front_ir.check(); });
           }
         }
@@ -448,7 +448,7 @@ Direction navigation(const double destination_lat, const double destination_lng)
             NavigationEntry::steering = 'r';
 
             motor_controller->set_speed(NAVIGATION_STEERING_SPEED)
-                ->turn_right()
+                ->turn_left()
                 ->stop_when([](){ return front_ir.check(); });
           }
         }
@@ -472,7 +472,7 @@ Direction navigation(const double destination_lat, const double destination_lng)
           NavigationEntry::steering = 'l';
           
           motor_controller->set_speed(NAVIGATION_STEERING_SPEED)
-            ->turn_left()
+            ->turn_right()
             ->stop_when([]{ return front_ir.check(); });
         }
         return NONE;
