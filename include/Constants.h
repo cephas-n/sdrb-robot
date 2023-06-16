@@ -12,31 +12,31 @@
 #ifndef _CONSTANTS_H_
 #define _CONSTANTS_H_
 
- // Estimated amount of time (in milliseconds) require to steer the wheels by 90deg or -90deg
+ // Estimated amount of time (in milliseconds) required to steer the wheels by 90deg or -90deg
 const unsigned STEERING_DURATION = 1500;
 
-// Estimated amount of time (in milliseconds) require to steer the wheels by 90deg or -90deg
+// The steering speed  of the robot (0 -> 255) during obstacle avoidance
 const unsigned OBSTACLE_STEERING_SPEED = 150;
 
-// Estimated amount of time (in milliseconds) require to steer the wheels by 90deg or -90deg
+// The steering speed  of the robot (0 -> 255) during the normal operation mode
 const unsigned NAVIGATION_STEERING_SPEED = 255;
 
 // Time interval (in milliseconds) in which the robot will move forward, then stops
-const int FORWARD_DURATION = 500;
+const int FORWARD_DURATION = 500; // Do not change it
 
 // compass heading correction/tolerance (degrees)
-const int DIRECTION_CORRECTION = 15;
+const int DIRECTION_CORRECTION = 5; 
 
 // GPS latitude correction/tolerance (degrees)
-const int GPS_LATITUDE_CORRECTION = 0;
+const int GPS_LATITUDE_CORRECTION = 0; // Not used
 
 // Destination distance precision from current position of the robot (degrees)
 const double DESTINATION_DIST_PRECISION = 20; // meters
 
 // The speed at which the robot will stop
-const int STOP_SPEED = 255;
+const int STOP_SPEED = 255; 
 
-// Nominal speed of the robot
+// Nominal speed of the robot (0 - 255)
 unsigned int MOTOR_SPEED = 255;
 
 // Bluetooth command list
@@ -49,11 +49,11 @@ enum Command
   TURN_RIGHT,
   FORWARD,
   BACKWARD,
-  DESTINATION_ACCOUNTING,
-  DESTINATION_CAFE,
-  DESTINATION_LIBRARY,
-  DESTINATION_HOME
-};
+  DESTINATION_ACCOUNTING, // same as Location 1
+  DESTINATION_CAFE, // same as Location 2
+  DESTINATION_LIBRARY, // same as Location 3
+  DESTINATION_HOME // same as Location 0
+}; // Don't change it unless you know what your doing
 
 // Directions list
 enum Direction
@@ -63,12 +63,12 @@ enum Direction
   LEFT,
   RIGHT,
   NONE
-};
+}; // Don't Change it
 
 // number of motors per motor driver
-const int MOTORS_PER_MOTOR_DRIVER = 2;
+const int MOTORS_PER_MOTOR_DRIVER = 2; // Don't change it
 
-// logger sampling time in milliseconds
-const uint16_t LOGGER_SAMPLING_TIME = 5000; 
+// logger sampling time in milliseconds (interval at which the navigation data are saved on the SD card)
+const uint16_t LOGGER_SAMPLING_TIME = 5000; // You can change if you more data
 
 #endif

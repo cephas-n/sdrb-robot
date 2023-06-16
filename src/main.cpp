@@ -896,7 +896,7 @@ void loop() {
   if(State::arrived) 
   {
     // robot has arrived at destination
-    led_stop.blink(3, 1000);
+    led_stop.blink(1, 1000);
   }
   else if (State::robot == HIGH)
   {
