@@ -11,7 +11,7 @@
 #ifndef _LOCATIONS_H_
 #define _LOCATIONS_H_
 
-const double allDestinations[4][2]{
+const double allDestinations[4][2] {
     {35.18894263172795, 33.35872364510861}, // HOME
     {35.20026886733084, 33.350063087156606}, // location 1
     {35.1884523126052, 33.36005093520174},  // location 2

@@ -29,4 +29,5 @@
     Direction choose_side();
     bool obstacle_avoidance();
     void logger();
+    void run_robot(Path &);
 #endif

@@ -1,0 +1,29 @@
+#include <Arduino.h>
+#include <Vector.h>
+
+void setup() {
+    Serial.begin(9600);
+}
+
+int arr[5];
+void loop() {
+    // Serial.println(23);
+    Vector<int> v(arr);
+
+    // v[0] = 10;
+    // v[1] = 200;
+    // v[2] = 300;
+    // v[3] = 40;
+    v.push_back(20);
+    v.push_back(50);
+    v.push_back(100);
+    Serial.println(v.size());
+    Serial.println(*v.begin());
+    for(auto x: v) {
+        Serial.println(x);
+    }
+
+    delay(2000);
+}
+
+void cleanup() {}

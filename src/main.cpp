@@ -59,17 +59,20 @@ Cephas Naweji, Abel Tshimbu, Eliane Nsenga, Caleb Bahaya, Sarah Musinde, Mohamme
 #include <SD.h>
 
 // Custom  Headers
-#include <Pins.h>
+#include <Vector.h>
 #include <Constants.h>
+#include <Path.h>
+#include <Pins.h>
 #include <Locations.h>
 #include <States.h>
 #include <DataEntries.h>
 #include <FunctionPrototypes.h>
+#include <utilities.h>
 
 // SDRB Library
 #include <SDRB.h>
 
-
+// TSP *tsp = new TSP();
 //########### DESTINATION ##############
 int active_destination = 0;
 bool destination_is_set = false;
@@ -294,19 +297,19 @@ void turn_off_robot()
    of the robot
 */
 bool gps_location_found = false;
-void update_gps_position()
-{
-  while (gps_serial.available() > 0)
-  {
-    gps.encode(gps_serial.read());
-  }
+// void update_gps_position()
+// {
+//   while (gps_serial.available() > 0)
+//   {
+//     gps.encode(gps_serial.read());
+//   }
 
-  if (gps.location.isUpdated())
-  {
-    gps_location_found = true;
-    NavigationEntry::hasStarted = true;
-  }
-}
+//   if (gps.location.isUpdated())
+//   {
+//     gps_location_found = true;
+//     NavigationEntry::hasStarted = true;
+//   }
+// }
 
 double get_distance_from_destination() {
   if (!gps_location_found) return 0;
@@ -327,6 +330,59 @@ double get_course_to_destination() {
     gps.location.lng(), 
     current_destination[0], 
     current_destination[1]
+  );
+}
+
+/*
+   Get position
+
+   this function return the latitude of the current position
+   of the robot
+*/
+void update_gps_position()
+{
+  while (gps_serial.available() > 0)
+  {
+    gps.encode(gps_serial.read());
+  }
+
+  if (gps.location.isUpdated())
+  {
+    gps_location_found = true;
+    NavigationEntry::hasStarted = true;
+  }
+}
+
+double get_gps_distance(
+    const double current_lat, 
+    const double current_lng,
+    const double destination_lat,
+    const double destination_lng
+) {
+  if (!gps_location_found) return 0;
+  
+  return TinyGPSPlus::distanceBetween(
+    current_lat,
+    current_lng,
+    destination_lat,
+    destination_lng
+  );
+}
+
+double get_gps_course(
+    const double current_lat, 
+    const double current_lng,
+    const double destination_lat,
+    const double destination_lng
+    ) 
+{
+  if(!gps_location_found)  return 0;
+
+  return TinyGPSPlus::courseTo(
+    current_lat, 
+    current_lng, 
+    destination_lat, 
+    destination_lng
   );
 }
 
@@ -745,6 +801,80 @@ bool obstacle_avoidance()
   return true; // obstacle avoided
 }
 
+
+// TSP ALGORITHM
+const int NUM_OF_DESTINATION = 4;
+
+Path waypoints[NUM_OF_DESTINATION][NUM_OF_DESTINATION];
+const Path *waypoints_ptr[NUM_OF_DESTINATION][NUM_OF_DESTINATION];
+void calculate_waypoints(const double locations[NUM_OF_DESTINATION][2]) {
+    for(int i = 0; i < 4; i++) {
+        for(int j = 0; j < 4; j++) {
+            const double distance = get_gps_distance(
+                locations[i][0],
+                locations[i][1],
+                locations[j][0],
+                locations[j][1]
+            );
+            waypoints[i][j] = Path(i, j, distance);
+            Serial.println("Distance " + String(i) + " - " + String(j) + " : " + String(waypoints[i][j].getDistance()));
+        }
+    } 
+}
+
+Path _path_storage[NUM_OF_DESTINATION];
+Vector<Path> paths(_path_storage);
+int path_cost = 0;
+void calculate_path(int starting_point) {
+    // store all vertex apart from source vertex
+    int _vertex_storage[NUM_OF_DESTINATION];
+    Vector<int> vertex(_vertex_storage);
+    for (int i = 0; i < NUM_OF_DESTINATION; i++) {
+        if (i != starting_point) {
+            vertex.push_back(i);
+        }
+    }
+
+    // Serial.println(vertex.size());
+    // store minimum weight Hamiltonian Cycle.
+    int min_path = INT_MAX;
+    int last_min_path = min_path;
+    do {
+
+        // store current Path weight(cost)
+        int current_pathweight = 0;
+        Path _current_path_storage[NUM_OF_DESTINATION];
+        Vector<Path> current_path(_current_path_storage); 
+
+
+        // compute current path weight
+        int k = starting_point;
+        for (size_t i = 0; i < vertex.size(); i++) {
+            current_pathweight += waypoints[k][vertex[i]].getDistance();
+            current_path.push_back(waypoints[k][vertex[i]]);
+            k = vertex[i];
+        }
+        current_pathweight += waypoints[k][starting_point].getDistance();
+        current_path.push_back(waypoints[k][starting_point]);
+
+        // update minimum
+        min_path = min(min_path, current_pathweight);
+
+        if(last_min_path != min_path) {
+            for(size_t i = 0; i < 4; i++) {
+                paths.push_back(current_path[i]);
+            }
+        }
+
+        last_min_path = min_path;
+        
+    } while (next_permutation<VectorIterator<int>>(vertex.begin(), vertex.end()));
+
+    path_cost = min_path;
+}
+
+
+
 void logger() {
   // every 5 seconds
   static uint32_t last_update = millis();
@@ -827,9 +957,28 @@ void setup()
     Serial.println("SD card: READY");
   }
 
+  // 9. WAIT FOR VALID LOCATION
+  while(!gps_location_found) {
+    Serial.println("Waiting for a valid location ...");
+    led_stop.blink(1, 100);
+
+    update_gps_position();
+  }
+
+  // 10. wait 20secs then update location
+  delay(2000);
+  update_gps_position();
+  
+  // 11. CALCULATE PATH
+  calculate_waypoints(allDestinations);
+  calculate_path(0);
+
   //OTHERS
   led_stop.turn_on();
   led_active.turn_off();
+
+  // Serial.println(path[1].getDistance());
+  // Serial.print("Path COST = ");
 }
 //####################### END ARDUINO SETUP FUNCTIONS #######################
 
@@ -844,6 +993,24 @@ void setup()
  *****************************************************************************
  *****************************************************************************/
 void loop() {
+  for(auto &path: paths) {
+
+    if(path.completed) continue;
+    
+    long t = millis();
+    while (millis() - t < 60000)
+    {
+      run_robot(path);
+      Serial.println("Moving from: " + String(path.start()) + " to: " + String(path.end()) + ", distance: " + String(path.getDistance()));
+    }
+    
+    path.completed = true;
+  }
+
+  Serial.println("Mission Finished!!!!!!!!!!!!!!!!");
+}
+
+void run_robot(Path &path) {
   // 0. LOGGER
   logger();
 
