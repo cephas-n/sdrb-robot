@@ -71,4 +71,7 @@ const int MOTORS_PER_MOTOR_DRIVER = 2; // Don't change it
 // logger sampling time in milliseconds (interval at which the navigation data are saved on the SD card)
 const uint16_t LOGGER_SAMPLING_TIME = 5000; // You can change if you more data
 
+// number of destinations
+const int NUM_OF_DESTINATIONS = 4;
+
 #endif

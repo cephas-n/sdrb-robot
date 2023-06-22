@@ -416,7 +416,9 @@ Direction navigation(const double destination_lat, const double destination_lng)
     {
       Serial.println("=======THE ROBOT HAS ARRIVED AT DESTIONATION " + String(active_destination) + "======");
       State::robot = LOW;
-      State::arrived = true;      
+      State::arrived = true;
+
+      return NONE;
     }
 
     Serial.print("STEERING: ");
@@ -803,11 +805,11 @@ bool obstacle_avoidance()
 
 
 // TSP ALGORITHM
-const int NUM_OF_DESTINATION = 4;
+// const int NUM_OF_DESTINATIONS = 4;
 
-Path waypoints[NUM_OF_DESTINATION][NUM_OF_DESTINATION];
-const Path *waypoints_ptr[NUM_OF_DESTINATION][NUM_OF_DESTINATION];
-void calculate_waypoints(const double locations[NUM_OF_DESTINATION][2]) {
+Path waypoints[NUM_OF_DESTINATIONS][NUM_OF_DESTINATIONS];
+const Path *waypoints_ptr[NUM_OF_DESTINATIONS][NUM_OF_DESTINATIONS];
+void calculate_waypoints(const double locations[NUM_OF_DESTINATIONS][2]) {
     for(int i = 0; i < 4; i++) {
         for(int j = 0; j < 4; j++) {
             const double distance = get_gps_distance(
@@ -822,14 +824,14 @@ void calculate_waypoints(const double locations[NUM_OF_DESTINATION][2]) {
     } 
 }
 
-Path _path_storage[NUM_OF_DESTINATION];
+Path _path_storage[NUM_OF_DESTINATIONS];
 Vector<Path> paths(_path_storage);
 int path_cost = 0;
 void calculate_path(int starting_point) {
     // store all vertex apart from source vertex
-    int _vertex_storage[NUM_OF_DESTINATION];
+    int _vertex_storage[NUM_OF_DESTINATIONS];
     Vector<int> vertex(_vertex_storage);
-    for (int i = 0; i < NUM_OF_DESTINATION; i++) {
+    for (int i = 0; i < NUM_OF_DESTINATIONS; i++) {
         if (i != starting_point) {
             vertex.push_back(i);
         }
@@ -843,7 +845,7 @@ void calculate_path(int starting_point) {
 
         // store current Path weight(cost)
         int current_pathweight = 0;
-        Path _current_path_storage[NUM_OF_DESTINATION];
+        Path _current_path_storage[NUM_OF_DESTINATIONS];
         Vector<Path> current_path(_current_path_storage); 
 
 
@@ -998,9 +1000,10 @@ void loop() {
     if(path.completed) continue;
     
     long t = millis();
-    while (millis() - t < 60000)
+    bool arrived = false;
+    while (!arrived)
     {
-      run_robot(path);
+      arrived = run_robot(path);
       Serial.println("Moving from: " + String(path.start()) + " to: " + String(path.end()) + ", distance: " + String(path.getDistance()));
     }
     
@@ -1010,17 +1013,14 @@ void loop() {
   Serial.println("Mission Finished!!!!!!!!!!!!!!!!");
 }
 
-void run_robot(Path &path) {
+int run_robot(Path &path) {
   // 0. LOGGER
   logger();
 
-  // 0.1 WAIT FOR VALID LOCATION
-  while(!gps_location_found) {
-    Serial.println("Waiting for a valid location ...");
-    led_stop.blink(1, 100);
-
-    update_gps_position();
-  }
+  // 0.1 CHECK IF ARRIVED AT DESTINATION
+  // if(State::arrived) {
+  //   return 1;
+  // }
 
   // 1. BLUETOOTH COMMAND
   if (Serial.available() > 0)
@@ -1076,7 +1076,11 @@ void run_robot(Path &path) {
     if (!State::obstacle)
     {
       //3.1.  AUTONOMOUS NAVIGATION
-      switch (navigation(current_destination[0], current_destination[1]))
+      const Direction direction = navigation(
+        allDestinations[path.end()][0], 
+        allDestinations[path.end()][1]
+      );
+      switch (direction)
       {
         case LEFT:
           turn_left(NAVIGATION_STEERING_SPEED);
@@ -1113,6 +1117,9 @@ void run_robot(Path &path) {
     led_active.turn_off();
     led_stop.turn_on();
   }
+
+  // 4 CHECK IF ARRIVED AT DESTINATION
+  return State::arrived;
 }
 
 
