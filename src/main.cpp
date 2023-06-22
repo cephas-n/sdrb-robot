@@ -967,13 +967,17 @@ void setup()
     update_gps_position();
   }
 
-  // 10. wait 20secs then update location
+  // 10. wait 10secs then update location
   delay(2000);
   update_gps_position();
   
   // 11. CALCULATE PATH
   calculate_waypoints(allDestinations);
   calculate_path(0);
+  Serial.print("Path: ");
+  for(auto &path: paths) {
+    Serial.print(String(path.end()) + ", ");
+  }
 
   //OTHERS
   led_stop.turn_on();
@@ -995,11 +999,17 @@ void setup()
  *****************************************************************************
  *****************************************************************************/
 void loop() {
+  // Obstacle Avoidance test
+  // State::obstacle = front_ir.check();
+  // if(State::obstacle) {
+  //   obstacle_avoidance();
+  // }
+
+  // Main
   for(auto &path: paths) {
 
     if(path.completed) continue;
     
-    long t = millis();
     bool arrived = false;
     while (!arrived)
     {
@@ -1008,6 +1018,11 @@ void loop() {
     }
     
     path.completed = true;
+
+    // indicator
+    run_buzzer(500);
+    run_buzzer(500);
+    run_buzzer(500);
   }
 
   Serial.println("Mission Finished!!!!!!!!!!!!!!!!");
