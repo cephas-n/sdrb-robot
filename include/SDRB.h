@@ -103,18 +103,18 @@ class MotorController {
       void (*in_progress)() = nullptr, 
       void (*completed)() = nullptr)
     {
-      // if(driver_left->get_state() == HIGH) driver_left->stop();
-      // if(driver_right->get_state() == HIGH) driver_right->stop();
+      if(driver_left->get_state() == HIGH) driver_left->stop();
+      if(driver_right->get_state() == HIGH) driver_right->stop();
 
-      // const long int start_time = millis();
-      // while(millis() - start_time <= duration) {
-      //   if(*in_progress != nullptr) in_progress();
+      const long int start_time = millis();
+      while(millis() - start_time <= duration) {
+        if(*in_progress != nullptr) in_progress();
 
-      //   driver_left->forward();
-      //   driver_right->forward();
-      // }
+        driver_left->forward();
+        driver_right->forward();
+      }
 
-      // if(*completed != nullptr) completed();
+      if(*completed != nullptr) completed();
 
       return this;
     }
@@ -140,15 +140,15 @@ class MotorController {
     }
 
     MotorController *turn_left() {
-      // driver_left->stop();
-      // driver_right->forward();
+      driver_left->stop();
+      driver_right->forward();
 
       return this;
     }
 
     MotorController *turn_right() {
-      // driver_left->forward();
-      // driver_right->stop();
+      driver_left->forward();
+      driver_right->stop();
 
       return this;
     }
