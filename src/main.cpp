@@ -104,6 +104,9 @@ Led led_active;
 Led led_left;
 Led led_right;
 
+Path _path_storage[NUM_OF_DESTINATIONS];
+Vector<Path> paths(_path_storage);
+int path_cost = 0;
 
 /*****************************************************************************
  *****************************************************************************
@@ -417,6 +420,7 @@ Direction navigation(const double destination_lat, const double destination_lng)
       Serial.println("=======THE ROBOT HAS ARRIVED AT DESTIONATION " + String(active_destination) + "======");
       State::robot = LOW;
       State::arrived = true;
+      NavigationEntry::arrived = true;
 
       return NONE;
     }
@@ -559,6 +563,9 @@ Direction navigation(const double destination_lat, const double destination_lng)
 */
 bool save_navigation_data()
 {
+  /**
+   * |id|lat|lng|distance|current heading|distnation heading|steering|time|obstacle|destination id| arrived|
+   */
   static uint32_t last_update = millis();
 
   if (!NavigationEntry::hasStarted || millis() - last_update <= LOGGER_SAMPLING_TIME)
@@ -577,7 +584,9 @@ bool save_navigation_data()
     + String(NavigationEntry::destinationHeading) + ','
     + String(NavigationEntry::steering) + ','
     + String(millis()) + ','
-    + String(NavigationEntry::obstacle);
+    + String(NavigationEntry::obstacle)
+    + String(NavigationEntry::destination)
+    + String(NavigationEntry::arrived);
   id++;
   //generate filename
   const String filename = (gps.time.isValid() ? String(gps.time.value()) : "") +
@@ -606,6 +615,7 @@ bool save_navigation_data()
 */
 void save_data(const String &filename, const String& data)
 {
+  static bool first_time_opened = true; 
   Serial.println("SD Card: Opening '" + filename + "'");
 
   // open file
@@ -613,6 +623,17 @@ void save_data(const String &filename, const String& data)
 
   if (file)
   {
+    if(first_time_opened) {
+      // save path
+      String path_string = "Path: " + paths.at(0).start();
+      for(auto &path: paths) {
+        path_string += " -> " + String(path.end());
+      }
+      path_string += " | Cost: " + String(path_cost, 2);
+      file.println(path_string.c_str());
+      first_time_opened = false;
+    }
+
     file.println(data.c_str());
     Serial.println("SD Card: data saved successfully");
   }
@@ -824,9 +845,6 @@ void calculate_waypoints(const double locations[NUM_OF_DESTINATIONS][2]) {
     } 
 }
 
-Path _path_storage[NUM_OF_DESTINATIONS];
-Vector<Path> paths(_path_storage);
-int path_cost = 0;
 void calculate_path(int starting_point) {
     // store all vertex apart from source vertex
     int _vertex_storage[NUM_OF_DESTINATIONS];
@@ -985,7 +1003,7 @@ void setup()
     final_destinations[i][0] = allDestinations[i][0];
     final_destinations[i][1] = allDestinations[i][1];
   }
-  
+
   // 11.b calculate path
   calculate_waypoints(final_destinations);
   calculate_path(2);
@@ -1031,8 +1049,10 @@ void loop() {
   for(auto &path: paths) {
 
     if(path.completed) continue;
-    
+
     bool arrived = false;
+    NavigationEntry::destination = path.end();
+
     while (!arrived)
     {
       arrived = run_robot(path);
@@ -1040,6 +1060,7 @@ void loop() {
     }
     
     path.completed = true;
+    save_navigation_data();
 
     // indicator
     run_buzzer(500);

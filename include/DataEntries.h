@@ -26,6 +26,7 @@ namespace NavigationEntry
   int obstacle = LOW;
   double distance = 0;
   int destination = 0;
+  int arrived = 0;
 }
 //END NAVIGATION ENTRIES
 
