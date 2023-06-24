@@ -18,4 +18,14 @@ const double allDestinations[4][2] {
     {35.185269339871475, 33.35986861863806}, // location 3
 };
 
+
+/**
+ * 11.a 
+ * Variable where we'll copy allDestinations and replace the home locations by the current location
+ * to make the calcullation of the path dynamic based on the current position
+ * of the robot
+ */
+double final_destinations[NUM_OF_DESTINATIONS][2];
+
+
 #endif

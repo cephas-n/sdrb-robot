@@ -972,24 +972,41 @@ void setup()
   update_gps_position();
   
   // 11. CALCULATE PATH
-  calculate_waypoints(allDestinations);
+  /**
+   * 11.a 
+   * Copy locations and replace the home locations by the current location
+   * to make the calcullation of the path dynamic based on the current position
+   * of the robot
+   */
+  double final_destinations[NUM_OF_DESTINATIONS][2];
+  final_destinations[0][0] = gps.location.lat();
+  final_destinations[0][1] = gps.location.lng();
+  for(size_t i = 1; i < NUM_OF_DESTINATIONS; i++) {
+    final_destinations[i][0] = allDestinations[i][0];
+    final_destinations[i][1] = allDestinations[i][1];
+  }
+  
+  // 11.b calculate path
+  calculate_waypoints(final_destinations);
   calculate_path(2);
   Serial.print("Path: ");
+
+  // 11.c path calculation done indicator
   if(paths.size() > 0) {
     led_left.blink(1, 500);
     led_right.blink(1, 500);
   }
 
+  // 11.c print out path
+  Serial.print("Path: ");
   for(auto &path: paths) {
-    Serial.print("======" + String(path.start()) + ", =======");
+    Serial.print(String(path.start()) + " -> ");
   }
+  Serial.println();
 
   //OTHERS
   led_stop.turn_on();
   led_active.turn_off();
-
-  // Serial.println(path[1].getDistance());
-  // Serial.print("Path COST = ");
 }
 //####################### END ARDUINO SETUP FUNCTIONS #######################
 

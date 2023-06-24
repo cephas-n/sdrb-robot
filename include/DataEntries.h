@@ -25,6 +25,7 @@ namespace NavigationEntry
   char steering = '-';
   int obstacle = LOW;
   double distance = 0;
+  int destination = 0;
 }
 //END NAVIGATION ENTRIES
 
