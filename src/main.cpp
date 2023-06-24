@@ -430,15 +430,15 @@ Direction navigation(const double destination_lat, const double destination_lng)
     }
     if (currentHeading > destinationHeadingHigh && abs(currentHeading - destinationHeadingHigh) < 90)
     {
-      Serial.println("Turn Right");
-      NavigationEntry::steering = 'r';
-      return RIGHT;
-    }
-    if (currentHeading < destinationHeadingHigh && abs(currentHeading - destinationHeadingLow) < 90)
-    {
       Serial.println("Turn Left");
       NavigationEntry::steering = 'l';
       return LEFT;
+    }
+    if (currentHeading < destinationHeadingHigh && abs(currentHeading - destinationHeadingLow) < 90)
+    {
+      Serial.println("Turn Right");
+      NavigationEntry::steering = 'r';
+      return RIGHT;
     }
     if (abs(currentHeading - destinationHeadingLow) >= 90)
     {
@@ -456,8 +456,8 @@ Direction navigation(const double destination_lat, const double destination_lng)
           currentHeading = get_compass_heading();
           destinationHeading = get_course_to_destination();
 
-          Serial.println("Turn Right");
-          NavigationEntry::steering = 'r';
+          Serial.println("Turn Left");
+          NavigationEntry::steering = 'l';
 
           motor_controller->set_speed(NAVIGATION_STEERING_SPEED)
               ->turn_left()
@@ -480,8 +480,8 @@ Direction navigation(const double destination_lat, const double destination_lng)
             //update heading
             currentHeading = get_compass_heading();
             destinationHeading = get_course_to_destination();
-            Serial.println("Turn Left");
-            NavigationEntry::steering = 'l';
+            Serial.println("Turn Right");
+            NavigationEntry::steering = 'r';
 
             motor_controller->set_speed(NAVIGATION_STEERING_SPEED)
                 ->turn_right()
@@ -502,8 +502,8 @@ Direction navigation(const double destination_lat, const double destination_lng)
             currentHeading = get_compass_heading();
             destinationHeading = get_course_to_destination();
 
-            Serial.println("Turn Right");
-            NavigationEntry::steering = 'r';
+            Serial.println("Turn Left");
+            NavigationEntry::steering = 'l';
 
             motor_controller->set_speed(NAVIGATION_STEERING_SPEED)
                 ->turn_left()
@@ -526,8 +526,8 @@ Direction navigation(const double destination_lat, const double destination_lng)
           currentHeading = get_compass_heading();
           destinationHeading = get_course_to_destination();
 
-          Serial.println("Turn Left");
-          NavigationEntry::steering = 'l';
+          Serial.println("Turn Right");
+          NavigationEntry::steering = 'r';
           
           motor_controller->set_speed(NAVIGATION_STEERING_SPEED)
             ->turn_right()
@@ -973,10 +973,15 @@ void setup()
   
   // 11. CALCULATE PATH
   calculate_waypoints(allDestinations);
-  calculate_path(0);
+  calculate_path(2);
   Serial.print("Path: ");
+  if(paths.size() > 0) {
+    led_left.blink(1, 500);
+    led_right.blink(1, 500);
+  }
+
   for(auto &path: paths) {
-    Serial.print(String(path.end()) + ", ");
+    Serial.print("======" + String(path.start()) + ", =======");
   }
 
   //OTHERS
@@ -1047,6 +1052,7 @@ int run_robot(Path &path) {
       case START:
         State::robot = HIGH;
         State::arrived = LOW;
+        run_buzzer(100);
         delay(3000);
         break;
       case STOP:
@@ -1059,6 +1065,7 @@ int run_robot(Path &path) {
         current_destination[0] = allDestinations[active_destination][0];
         current_destination[1] = allDestinations[active_destination][1];
         destination_is_set = true;
+        run_buzzer(100);
         break;
       default:
         Serial.println("Unknown command!");

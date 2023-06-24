@@ -19,13 +19,13 @@ const unsigned STEERING_DURATION = 1500;
 const unsigned OBSTACLE_STEERING_SPEED = 255;
 
 // The steering speed  of the robot (0 -> 255) during the normal operation mode
-const unsigned NAVIGATION_STEERING_SPEED = 255;
+const unsigned NAVIGATION_STEERING_SPEED = 200;
 
 // Time interval (in milliseconds) in which the robot will move forward, then stops
 const int FORWARD_DURATION = 500; // Do not change it
 
 // compass heading correction/tolerance (degrees)
-const int DIRECTION_CORRECTION = 5; 
+const int DIRECTION_CORRECTION = 15; 
 
 // GPS latitude correction/tolerance (degrees)
 const int GPS_LATITUDE_CORRECTION = 0; // Not used
