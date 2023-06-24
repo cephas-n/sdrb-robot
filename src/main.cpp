@@ -1011,8 +1011,14 @@ void setup()
 
   // 11.c path calculation done indicator
   if(paths.size() > 0) {
-    led_left.blink(1, 500);
-    led_right.blink(1, 500);
+    for(size_t i = 0; i < 3; i++) {
+      led_left.turn_on();
+      led_right.turn_on();
+      delay(200);
+      led_left.turn_off();
+      led_right.turn_off();
+      delay(200);
+    }
   }
 
   // 11.c print out path
@@ -1066,6 +1072,7 @@ void loop() {
     run_buzzer(500);
     run_buzzer(500);
     run_buzzer(500);
+    delay(5000);
   }
 
   Serial.println("Mission Finished!!!!!!!!!!!!!!!!");
