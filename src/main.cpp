@@ -51,19 +51,12 @@ Cephas Naweji, Abel Tshimbu, Eliane Nsenga, Caleb Bahaya, Sarah Musinde, Mohamme
 **********************************************************************/
 
 #include <Arduino.h>
-#include <SoftwareSerial.h>
-#include <TinyGPS++.h>
-#include <QMC5883LCompass.h>
-#include <Wire.h>
-#include <SPI.h>
-#include <SD.h>
 
 // Custom  Headers
 #include <Vector.h>
 #include <Constants.h>
 #include <Path.h>
 #include <Pins.h>
-#include <Locations.h>
 #include <States.h>
 #include <DataEntries.h>
 #include <FunctionPrototypes.h>
@@ -71,29 +64,6 @@ Cephas Naweji, Abel Tshimbu, Eliane Nsenga, Caleb Bahaya, Sarah Musinde, Mohamme
 
 // SDRB Library
 #include <SDRB.h>
-
-// TSP *tsp = new TSP();
-//########### DESTINATION ##############
-int active_destination = 0;
-bool destination_is_set = false;
-double current_destination[2]  // default: HOME
-{
-  allDestinations[0][0],
-  allDestinations[0][1]
-};
-//########### END DESTINATION ##############
-
-
-//########### COMMUNICATION ##############
-SoftwareSerial gps_serial(Pin::GPS_TX, Pin::GPS_RX);
-//########### END COMMUNICATION ##############
-
-
-//########### LIBRARY INSTANCES ##############
-TinyGPSPlus gps;
-QMC5883LCompass compass;
-//########### END LIBRARY INSTANCES ##############
-
 
 MotorController* motor_controller = new MotorController();
 InfraRed front_ir;
@@ -104,9 +74,6 @@ Led led_active;
 Led led_left;
 Led led_right;
 
-Path _path_storage[NUM_OF_DESTINATIONS];
-Vector<Path> paths(_path_storage);
-int path_cost = 0;
 
 /*****************************************************************************
  *****************************************************************************
@@ -120,7 +87,7 @@ int path_cost = 0;
  /*
    Turns all the motor in forward direction
  */
-void forward(const uint8_t motor_speed = MOTOR_SPEED, const uint16_t duration = 0)
+void forward(const int motor_speed = MOTOR_SPEED, const uint16_t duration = 0)
 {
   led_left.turn_off();
   led_right.turn_off();
@@ -133,7 +100,7 @@ void forward(const uint8_t motor_speed = MOTOR_SPEED, const uint16_t duration = 
 /*
    Turns all the motor in backward direction
 */
-void backward(const uint8_t motor_speed = MOTOR_SPEED, const uint16_t duration = 0)
+void backward(const int motor_speed = MOTOR_SPEED, const uint16_t duration = 0)
 {
   led_left.turn_on();
   led_right.turn_on();
@@ -148,7 +115,7 @@ void backward(const uint8_t motor_speed = MOTOR_SPEED, const uint16_t duration =
    Right motors (2) ON
 
 */
-void turn_left(const uint8_t steering_speed = MOTOR_SPEED, const uint16_t steering_duration = 0)
+void turn_left(const int steering_speed = NAVIGATION_STEERING_SPEED, const uint16_t steering_duration = 0)
 {
   // indicators
   led_left.turn_on();
@@ -164,7 +131,7 @@ void turn_left(const uint8_t steering_speed = MOTOR_SPEED, const uint16_t steeri
    Left motors (1) OFF
    Right motors (2) ON
 */
-void turn_right(const uint8_t steering_speed = MOTOR_SPEED, const uint16_t steering_duration = 0)
+void turn_right(const int steering_speed = NAVIGATION_STEERING_SPEED, const uint16_t steering_duration = 0)
 {
   // indicators
   led_left.turn_off();
@@ -211,6 +178,7 @@ void run_buzzer(const uint16_t duration = 300)
 Command bluetooth_command()
 {
   char command = Serial.read();
+  Serial.flush();
 
   Serial.println("BLEUTOOTH CMD: " + String(command));
 
@@ -222,30 +190,16 @@ Command bluetooth_command()
   case '0':
     //stop robot
     return STOP;
-  case '+':
-    // Increase speed
-    MOTOR_SPEED = MOTOR_SPEED <= 240 ? MOTOR_SPEED + 10 : 255;
-    break;
-  case '-':
-    // Decrease speed
-    MOTOR_SPEED = MOTOR_SPEED > 20 ? MOTOR_SPEED - 10 : 5;
-    break;
+  case '2':
+    return TURN_LEFT;
   case '3':
-    // location: accounting
-    active_destination = 1;
-    return DESTINATION_ACCOUNTING;
+    return TURN_RIGHT;
   case '4':
-    // location: accounting
-    active_destination = 2;
-    return DESTINATION_CAFE;
+    return SPEED_UP;
   case '5':
-    // location: accounting
-    active_destination = 3;
-    return DESTINATION_LIBRARY;
+    return SPEED_DOWN;
   case '6':
-    // location: accounting
-    active_destination = 0;
-    return DESTINATION_HOME;
+    return RUN_BUZZER;
   default:
     //invalid or no command
     return VOID;
@@ -291,375 +245,6 @@ void stop_robot()
 void turn_off_robot()
 {
   State::robot = LOW;
-}
-
-/*
-   Get position
-
-   this function return the latitude of the current position
-   of the robot
-*/
-bool gps_location_found = false;
-// void update_gps_position()
-// {
-//   while (gps_serial.available() > 0)
-//   {
-//     gps.encode(gps_serial.read());
-//   }
-
-//   if (gps.location.isUpdated())
-//   {
-//     gps_location_found = true;
-//     NavigationEntry::hasStarted = true;
-//   }
-// }
-
-double get_distance_from_destination() {
-  if (!gps_location_found) return 0;
-  
-  return TinyGPSPlus::distanceBetween(
-    gps.location.lat(),
-    gps.location.lng(),
-    current_destination[0],
-    current_destination[1]
-  );
-}
-
-double get_course_to_destination() {
-  if(!gps_location_found)  return 0;
-
-  return TinyGPSPlus::courseTo(
-    gps.location.lat(), 
-    gps.location.lng(), 
-    current_destination[0], 
-    current_destination[1]
-  );
-}
-
-/*
-   Get position
-
-   this function return the latitude of the current position
-   of the robot
-*/
-void update_gps_position()
-{
-  while (gps_serial.available() > 0)
-  {
-    gps.encode(gps_serial.read());
-  }
-
-  if (gps.location.isUpdated())
-  {
-    gps_location_found = true;
-    NavigationEntry::hasStarted = true;
-  }
-}
-
-double get_gps_distance(
-    const double current_lat, 
-    const double current_lng,
-    const double destination_lat,
-    const double destination_lng
-) {
-  if (!gps_location_found) return 0;
-  
-  return TinyGPSPlus::distanceBetween(
-    current_lat,
-    current_lng,
-    destination_lat,
-    destination_lng
-  );
-}
-
-double get_gps_course(
-    const double current_lat, 
-    const double current_lng,
-    const double destination_lat,
-    const double destination_lng
-    ) 
-{
-  if(!gps_location_found)  return 0;
-
-  return TinyGPSPlus::courseTo(
-    current_lat, 
-    current_lng, 
-    destination_lat, 
-    destination_lng
-  );
-}
-
-/*
-   navigation
-
-   this function controls the autonomous navigation of the robot,
-   It returns the direction the robot should follow
-
-*/
-Direction navigation(const double destination_lat, const double destination_lng)
-{
-  update_gps_position();
-  if (gps_location_found)
-  {
-    int destinationHeading = get_course_to_destination();
-    double destinationHeadingLow = destinationHeading - DIRECTION_CORRECTION;
-    double destinationHeadingHigh = destinationHeading + DIRECTION_CORRECTION;
-    int currentHeading = get_compass_heading();
-
-    //save navigation data
-    NavigationEntry::latitude = gps.location.isValid() ? gps.location.lat() : -1.00;
-    NavigationEntry::longitude = gps.location.isValid() ? gps.location.lng() : -1.00;
-    NavigationEntry::destinationHeading = destinationHeading;
-    NavigationEntry::compassHeading = currentHeading;
-
-    // check if the user has arrived
-    //HAS ALREADY ARRIVED AT DESTINATION ?
-    NavigationEntry::distance = get_distance_from_destination();
-    if (gps_location_found && NavigationEntry::distance <= DESTINATION_DIST_PRECISION)
-    {
-      Serial.println("=======THE ROBOT HAS ARRIVED AT DESTIONATION " + String(active_destination) + "======");
-      State::robot = LOW;
-      State::arrived = true;
-      NavigationEntry::arrived = true;
-
-      return NONE;
-    }
-
-    Serial.print("STEERING: ");
-    if (currentHeading >= destinationHeadingLow && currentHeading <= destinationHeadingHigh)
-    {
-      Serial.println("Foward");
-      NavigationEntry::steering = 'f';
-      return FRONT;
-    }
-    if (currentHeading > destinationHeadingHigh && abs(currentHeading - destinationHeadingHigh) < 90)
-    {
-      Serial.println("Turn Left");
-      NavigationEntry::steering = 'l';
-      return LEFT;
-    }
-    if (currentHeading < destinationHeadingHigh && abs(currentHeading - destinationHeadingLow) < 90)
-    {
-      Serial.println("Turn Right");
-      NavigationEntry::steering = 'r';
-      return RIGHT;
-    }
-    if (abs(currentHeading - destinationHeadingLow) >= 90)
-    {
-      if ((currentHeading - destinationHeadingLow) > 0 && (currentHeading - destinationHeadingLow) <= 180)
-      {
-        while (abs(currentHeading - destinationHeadingLow) >= DIRECTION_CORRECTION)
-        {
-          // stop robot
-          if (State::robot == LOW)
-          {
-            break;
-          }
-
-          //update heading
-          currentHeading = get_compass_heading();
-          destinationHeading = get_course_to_destination();
-
-          Serial.println("Turn Left");
-          NavigationEntry::steering = 'l';
-
-          motor_controller->set_speed(NAVIGATION_STEERING_SPEED)
-              ->turn_left()
-              ->stop_when([](){ return front_ir.check(); });
-        }
-        return NONE;
-      }
-      if ((currentHeading - destinationHeadingLow) < 0)
-      {
-        if ((destinationHeadingLow - currentHeading) <= 180)
-        {
-          while (abs(currentHeading - destinationHeadingHigh) >= DIRECTION_CORRECTION)
-          {
-            // stop robot
-            if (State::robot == LOW)
-            {
-              break;
-            }
-
-            //update heading
-            currentHeading = get_compass_heading();
-            destinationHeading = get_course_to_destination();
-            Serial.println("Turn Right");
-            NavigationEntry::steering = 'r';
-
-            motor_controller->set_speed(NAVIGATION_STEERING_SPEED)
-                ->turn_right()
-                ->stop_when([](){ return front_ir.check(); });
-          }
-        }
-        if ((destinationHeadingLow - currentHeading) > 180)
-        {
-          while (abs(currentHeading - destinationHeadingHigh) >= DIRECTION_CORRECTION)
-          {
-            // stop robot
-            if (State::robot == LOW)
-            {
-              break;
-            }
-
-            //update heading
-            currentHeading = get_compass_heading();
-            destinationHeading = get_course_to_destination();
-
-            Serial.println("Turn Left");
-            NavigationEntry::steering = 'l';
-
-            motor_controller->set_speed(NAVIGATION_STEERING_SPEED)
-                ->turn_left()
-                ->stop_when([](){ return front_ir.check(); });
-          }
-        }
-        return NONE;
-      }
-      else
-      {
-        while (abs(currentHeading - destinationHeadingLow) >= DIRECTION_CORRECTION)
-        {
-          // stop robot
-          if (State::robot == LOW)
-          {
-            break;
-          }
-
-          //update heading
-          currentHeading = get_compass_heading();
-          destinationHeading = get_course_to_destination();
-
-          Serial.println("Turn Right");
-          NavigationEntry::steering = 'r';
-          
-          motor_controller->set_speed(NAVIGATION_STEERING_SPEED)
-            ->turn_right()
-            ->stop_when([]{ return front_ir.check(); });
-        }
-        return NONE;
-      }
-    }
-    else
-    {
-      Serial.println(" NOT FOUND");
-      return NONE;
-    }
-  }
-
-  Serial.println("Waiting for GPS signal ...");
-
-  return NONE;
-}
-
-
-/*
-   Save Navigation Data
-
-   this function save the navigation entries (current position, current heading,
-   time elapsed, obstacle) to the SD memory card in the following format:
-
-   entry_id,latitude,longitude,heading,time_elapsed,obstacle
-*/
-bool save_navigation_data()
-{
-  /**
-   * |id|lat|lng|distance|current heading|distnation heading|steering|time|obstacle|destination id| arrived|
-   */
-  static uint32_t last_update = millis();
-
-  if (!NavigationEntry::hasStarted || millis() - last_update <= LOGGER_SAMPLING_TIME)
-  {
-    return false;
-  }
-
-  static long int id = 1;
-  static bool filenameIsValid = false;
-
-  const String entry = String(id) + ','
-    + String(NavigationEntry::latitude, 10) + ','
-    + String(NavigationEntry::longitude, 10) + ','
-    + String(NavigationEntry::distance, 10) + ','
-    + String(NavigationEntry::compassHeading) + ','
-    + String(NavigationEntry::destinationHeading) + ','
-    + String(NavigationEntry::steering) + ','
-    + String(millis()) + ','
-    + String(NavigationEntry::obstacle)
-    + String(NavigationEntry::destination)
-    + String(NavigationEntry::arrived);
-  id++;
-  //generate filename
-  const String filename = (gps.time.isValid() ? String(gps.time.value()) : "") +
-    ".csv";
-  if (!filenameIsValid && filename != ".csv")
-  {
-    NavigationEntry::filename = filename;
-    filenameIsValid = true;
-  }
-  else if (!filenameIsValid)
-  {
-    return false;
-  }
-
-  // save data
-  save_data(NavigationEntry::filename.c_str(), entry.c_str());
-
-  return true;
-}
-
-
-/*
-   Save Data
-
-   this function write data to sd memory
-*/
-void save_data(const String &filename, const String& data)
-{
-  static bool first_time_opened = true; 
-  Serial.println("SD Card: Opening '" + filename + "'");
-
-  // open file
-  File file = SD.open(filename, FILE_WRITE);
-
-  if (file)
-  {
-    if(first_time_opened) {
-      // save path
-      String path_string = "Path: " + paths.at(0).start();
-      for(auto &path: paths) {
-        path_string += " -> " + String(path.end());
-      }
-      path_string += " | Cost: " + String(path_cost, 2);
-      file.println(path_string.c_str());
-      first_time_opened = false;
-    }
-
-    file.println(data.c_str());
-    Serial.println("SD Card: data saved successfully");
-  }
-  else
-  {
-    // error
-    Serial.println("SD Card: could'nt open the file '" + filename);
-  }
-
-  file.close();
-  Serial.println("SD Card: " + filename + " closed");
-}
-
-
-/*
-   Get compass heading with respect to North
-
-*/
-double get_compass_heading()
-{
-  compass.setCalibration(-922, 925, -1221, 462, -591, 0);
-  // Read compass values
-  compass.read();
-
-  // Return Azimuth reading
-  return compass.getAzimuth();
 }
 
 /*
@@ -753,8 +338,7 @@ bool obstacle_avoidance()
       }
       stop_all_motors();
       turn_right(MOTOR_SPEED, STEERING_DURATION);
-      break;
-
+  
     case LEFT:
       // step 1: turn toward direction
       turn_left(MOTOR_SPEED, STEERING_DURATION);
@@ -825,103 +409,6 @@ bool obstacle_avoidance()
 }
 
 
-// TSP ALGORITHM
-// const int NUM_OF_DESTINATIONS = 4;
-
-Path waypoints[NUM_OF_DESTINATIONS][NUM_OF_DESTINATIONS];
-const Path *waypoints_ptr[NUM_OF_DESTINATIONS][NUM_OF_DESTINATIONS];
-void calculate_waypoints(const double locations[NUM_OF_DESTINATIONS][2]) {
-    for(int i = 0; i < 4; i++) {
-        for(int j = 0; j < 4; j++) {
-            const double distance = get_gps_distance(
-                locations[i][0],
-                locations[i][1],
-                locations[j][0],
-                locations[j][1]
-            );
-            waypoints[i][j] = Path(i, j, distance);
-            Serial.println("Distance " + String(i) + " - " + String(j) + " : " + String(waypoints[i][j].getDistance()));
-        }
-    } 
-}
-
-void calculate_path(int starting_point) {
-    // store all vertex apart from source vertex
-    int _vertex_storage[NUM_OF_DESTINATIONS];
-    Vector<int> vertex(_vertex_storage);
-    for (int i = 0; i < NUM_OF_DESTINATIONS; i++) {
-        if (i != starting_point) {
-            vertex.push_back(i);
-        }
-    }
-
-    // Serial.println(vertex.size());
-    // store minimum weight Hamiltonian Cycle.
-    int min_path = INT_MAX;
-    int last_min_path = min_path;
-    do {
-
-        // store current Path weight(cost)
-        int current_pathweight = 0;
-        Path _current_path_storage[NUM_OF_DESTINATIONS];
-        Vector<Path> current_path(_current_path_storage); 
-
-
-        // compute current path weight
-        int k = starting_point;
-        for (size_t i = 0; i < vertex.size(); i++) {
-            current_pathweight += waypoints[k][vertex[i]].getDistance();
-            current_path.push_back(waypoints[k][vertex[i]]);
-            k = vertex[i];
-        }
-        current_pathweight += waypoints[k][starting_point].getDistance();
-        current_path.push_back(waypoints[k][starting_point]);
-
-        // update minimum
-        min_path = min(min_path, current_pathweight);
-
-        if(last_min_path != min_path) {
-            for(size_t i = 0; i < 4; i++) {
-                paths.push_back(current_path[i]);
-            }
-        }
-
-        last_min_path = min_path;
-        
-    } while (next_permutation<VectorIterator<int>>(vertex.begin(), vertex.end()));
-
-    path_cost = min_path;
-}
-
-
-
-void logger() {
-  // every 5 seconds
-  static uint32_t last_update = millis();
-  if(millis() - last_update >= LOGGER_SAMPLING_TIME) {
-    // Robot
-    Serial.println("ROBOT STATUS: " + String(State::robot ? "Working" : "Sleeping zzz..."));
-    Serial.println("HAS ARRIVED AT DESTINATION: " + String(State::arrived ? "YES" : "NO"));
-
-    // Infrared sensors
-    Serial.println("FRONT IR: " + String(front_ir.check() ? "detected" : "-"));
-    Serial.println("LEFT IR: " + String(left_ir.check() ? "detected" : "-"));
-    Serial.println("RIGHT IR: " + String(right_ir.check() ? "detected" : "-"));
-
-    // Navigation
-    Serial.println("DISTINATION: id = " + String(active_destination + 1)
-                  + ", lat=" + String(current_destination[0], 6) 
-                  + ",  lng=" + String(current_destination[1], 6)
-                  + ",  heading=" + String(get_course_to_destination(), 2));
-    Serial.println("CURRENT POSITION: lat=" + String(gps.location.lat(), 6) 
-                + ",  lng=" + String(gps.location.lng(), 6)
-                + ",  distance=" + String(get_distance_from_destination(), 2) + " meters");
-    Serial.println("CURRENT HEADING:" + String(get_compass_heading(), 6));
-
-    Serial.println("MISSION FILE NAME: " + String(NavigationEntry::filename));
-  }
-}
-
 
 //####################### ARDUINO SETUP FUNCTIONS #######################
 void setup()
@@ -956,78 +443,6 @@ void setup()
   while (!Serial);
   Serial.println("Serial monitor: OK");
 
-  //6. INITIALIZE GPS COMMUNICATION
-  gps_serial.begin(9600);
-  while (!gps_serial)
-  {
-    Serial.println("GPS com: FAILED");
-  }
-  Serial.println("GPS com: OK");
-
-  //7. COMPASS CONFIGURATION
-  compass.init();
-
-  //8. SD CARD MEMORY
-  if (!SD.begin(Pin::SD_CARD))
-  {
-    Serial.println("SD card: FAILED");
-  }
-  else
-  {
-    Serial.println("SD card: READY");
-  }
-
-  // 9. WAIT FOR VALID LOCATION
-  while(!gps_location_found) {
-    Serial.println("Waiting for a valid location ...");
-    led_stop.blink(1, 100);
-
-    update_gps_position();
-  }
-
-  // 10. wait 10secs then update location
-  delay(2000);
-  update_gps_position();
-  
-  // 11. CALCULATE PATH
-  /**
-   * 11.a 
-   * Copy locations and replace the home locations by the current location
-   * to make the calcullation of the path dynamic based on the current position
-   * of the robot
-   */
-  double final_destinations[NUM_OF_DESTINATIONS][2];
-  final_destinations[0][0] = gps.location.lat();
-  final_destinations[0][1] = gps.location.lng();
-  for(size_t i = 1; i < NUM_OF_DESTINATIONS; i++) {
-    final_destinations[i][0] = allDestinations[i][0];
-    final_destinations[i][1] = allDestinations[i][1];
-  }
-
-  // 11.b calculate path
-  calculate_waypoints(final_destinations);
-  calculate_path(0);
-  Serial.print("Path: ");
-
-  // 11.c path calculation done indicator
-  if(paths.size() > 0) {
-    for(size_t i = 0; i < 3; i++) {
-      led_left.turn_on();
-      led_right.turn_on();
-      delay(200);
-      led_left.turn_off();
-      led_right.turn_off();
-      delay(200);
-    }
-  }
-
-  // 11.c print out path
-  Serial.print("Path: ");
-  for(auto &path: paths) {
-    Serial.print(String(path.start()) + " -> ");
-  }
-  Serial.println();
-
   //OTHERS
   led_stop.turn_on();
   led_active.turn_off();
@@ -1045,75 +460,24 @@ void setup()
  *****************************************************************************
  *****************************************************************************/
 void loop() {
-  // Obstacle Avoidance test
-  // State::obstacle = front_ir.check();
-  // if(State::obstacle) {
-  //   obstacle_avoidance();
+  // while (true)
+  // { 
+  //   // turn_left();
   // }
-
-  // Main
-  for(auto &path: paths) {
-
-    if(path.completed) continue;
-
-    bool arrived = false;
-    NavigationEntry::destination = path.end();
-
-    while (!arrived)
-    {
-      arrived = run_robot(path);
-      Serial.println("Moving from: " + String(path.start()) + " to: " + String(path.end()) + ", distance: " + String(path.getDistance()));
-    }
-    
-    path.completed = true;
-    save_navigation_data();
-
-    // indicator
-    run_buzzer(500);
-    run_buzzer(500);
-    run_buzzer(500);
-    delay(5000);
-  }
-
-  Serial.println("Mission Finished!!!!!!!!!!!!!!!!");
-}
-
-int run_robot(Path &path) {
-  // 0. LOGGER
-  logger();
-
-  // 0.1 CHECK IF ARRIVED AT DESTINATION
-  // if(State::arrived) {
-  //   return 1;
-  // }
-
+  
   // 1. BLUETOOTH COMMAND
+  Command cmd = VOID;
   if (Serial.available() > 0)
   {
-    Command cmd = bluetooth_command();
-    Serial.println("BLUETOOTH COMMAND:" + String(cmd));
-    switch (cmd)
-    {
-      case START:
-        State::robot = HIGH;
-        State::arrived = LOW;
-        run_buzzer(100);
-        delay(3000);
-        break;
-      case STOP:
-        stop_robot();
-        break;
-      case DESTINATION_ACCOUNTING:
-      case DESTINATION_CAFE:
-      case DESTINATION_LIBRARY:
-      case DESTINATION_HOME:
-        current_destination[0] = allDestinations[active_destination][0];
-        current_destination[1] = allDestinations[active_destination][1];
-        destination_is_set = true;
-        run_buzzer(100);
-        break;
-      default:
-        Serial.println("Unknown command!");
+    cmd = bluetooth_command();
+    if(cmd == START) {
+      State::robot = HIGH;
+      State::arrived = LOW;
+      run_buzzer(100);
+      delay(3000);
+    } 
+    else if(cmd == STOP) {
+      stop_robot();
     }
   }
   // END BLUETOOTH COMMAND
@@ -1127,12 +491,8 @@ int run_robot(Path &path) {
   //END MANUAL COMMAND
 
   // 3. ROBOT ACTIVE MODE
-  if(State::arrived) 
-  {
-    // robot has arrived at destination
-    led_stop.blink(1, 1000);
-  }
-  else if (State::robot == HIGH)
+  Serial.println("Robot status" + String(State::robot));
+  if (State::robot == HIGH)
   {
     // start robot
     led_active.turn_on();
@@ -1142,30 +502,31 @@ int run_robot(Path &path) {
 
     if (!State::obstacle)
     {
-      //3.1.  AUTONOMOUS NAVIGATION
-      const Direction direction = navigation(
-        allDestinations[path.end()][0], 
-        allDestinations[path.end()][1]
-      );
-      switch (direction)
+      //3.1.  MANUAL NAVIGATION
+      switch (cmd)
       {
-        case LEFT:
-          turn_left(NAVIGATION_STEERING_SPEED);
-          delay(200);
+        case TURN_LEFT:
+          turn_left(NAVIGATION_STEERING_SPEED, NAVIGATION_STEERING_DURATION);
           break;
-        case RIGHT:
-          turn_right(NAVIGATION_STEERING_SPEED);
-          delay(200);
+        case TURN_RIGHT:
+          turn_right(NAVIGATION_STEERING_SPEED, NAVIGATION_STEERING_DURATION);
           break;
-        case FRONT:
-          forward();
+        case SPEED_UP:
+          MOTOR_SPEED += (MOTOR_SPEED < 255 ? SPEED_PARTITION : 255);
           break;
-          forward(100);
+        case SPEED_DOWN:
+          MOTOR_SPEED -= (MOTOR_SPEED < 255 ? SPEED_PARTITION : 255);
+          break;
+        case RUN_BUZZER:
+          run_buzzer(200);
+          break;
         default:
           Serial.println("Searching direction ...");
       }
-      save_navigation_data(); //save navigation history 
-      //END AUTONOMOUS NAVIGATION
+
+      forward();
+      // cmd = VOID;
+      //END MANUAL NAVIGATION
     }
     else
     {
@@ -1185,8 +546,7 @@ int run_robot(Path &path) {
     led_stop.turn_on();
   }
 
-  // 4 CHECK IF ARRIVED AT DESTINATION
-  return State::arrived;
+  Serial.println("CMD ===" + String(cmd));
 }
 
 

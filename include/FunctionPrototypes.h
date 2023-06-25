@@ -14,11 +14,11 @@
     double get_distance_from_destination();
     void save_data(const String &filename, const String &entry);
     void turn_off_robot();
-    void turn_left(const uint8_t steering_speed, const uint16_t steering_duration);
-    void turn_right(const uint8_t steering_speed, const uint16_t steering_duration);
-    void forward(const uint8_t motor_speed, const uint16_t duration);
-    void backward(const uint8_t motor_speed, const uint16_t duration);
-    void backward(const uint8_t motor_speed, const uint16_t duration);
+    void turn_left(const int steering_speed, const uint16_t steering_duration);
+    void turn_right(const int steering_speed, const uint16_t steering_duration);
+    void forward(const int motor_speed, const uint16_t duration);
+    void backward(const int motor_speed, const uint16_t duration);
+    void backward(const int motor_speed, const uint16_t duration);
     void stop_all_motors();
     void run_buzzer(const uint16_t duration);
     Command bluetooth_command();

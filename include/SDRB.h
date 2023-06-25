@@ -23,7 +23,7 @@ class Motor {
       this->state = HIGH;
       digitalWrite(this->positive_pin, HIGH);
       digitalWrite(this->negative_pin, LOW);
-
+      analogWrite(this->en_pin, MOTOR_SPEED);
       return this;
     }
 
@@ -39,6 +39,7 @@ class Motor {
       this->state = LOW;
       digitalWrite(this->positive_pin, LOW);
       digitalWrite(this->negative_pin, LOW);
+      analogWrite(this->en_pin, 0);
     }
 
     int get_state() {
@@ -48,6 +49,8 @@ class Motor {
 };
 
 class MotorDriver: public Motor {
+  protected:
+    unsigned int speed = 0;
   public:
     MotorDriver() = default;
     ~MotorDriver() = default;
@@ -72,9 +75,14 @@ class MotorDriver: public Motor {
     }
 
     MotorDriver *set_speed(const uint8_t speed) {
+      this->speed = speed;
       analogWrite(this->en_pin, speed);
 
       return this;
+    }
+
+    unsigned int get_speed() { 
+      return this->speed;
     }
 };
 
@@ -147,8 +155,8 @@ class MotorController {
     }
 
     MotorController *turn_right() {
-      driver_left->forward();
       driver_right->stop();
+      driver_left->forward();
 
       return this;
     }
@@ -179,11 +187,11 @@ class MotorController {
 
 
     void stop() {
-      for(int speed = MOTOR_SPEED; speed > 100; speed--) {
-        driver_left->set_speed(speed);
-        driver_right->set_speed(speed);
-        delay(2);
-      }
+      // for(int speed = MOTOR_SPEED; speed > 100; speed--) {
+      //   driver_left->set_speed(speed);
+      //   driver_right->set_speed(speed);
+      //   delay(2);
+      // }
 
       driver_left->stop();
       driver_right->stop();

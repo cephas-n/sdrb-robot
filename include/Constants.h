@@ -12,14 +12,21 @@
 #ifndef _CONSTANTS_H_
 #define _CONSTANTS_H_
 
+// SPEED Partition
+const unsigned int SPEED_PARTITION = 63;
+const unsigned int NUM_OF_SPEED_PARTITIONS = 4;
+
  // Estimated amount of time (in milliseconds) required to steer the wheels by 90deg or -90deg
 const unsigned STEERING_DURATION = 1500;
 
 // The steering speed  of the robot (0 -> 255) during obstacle avoidance
-const unsigned OBSTACLE_STEERING_SPEED = 255;
+const unsigned OBSTACLE_STEERING_SPEED = 2 * SPEED_PARTITION;
 
 // The steering speed  of the robot (0 -> 255) during the normal operation mode
 const unsigned NAVIGATION_STEERING_SPEED = 255;
+
+// The steering speed  of the robot (0 -> 255) during the normal operation mode
+const unsigned NAVIGATION_STEERING_DURATION = 1500;
 
 // Time interval (in milliseconds) in which the robot will move forward, then stops
 const int FORWARD_DURATION = 500; // Do not change it
@@ -37,7 +44,7 @@ const double DESTINATION_DIST_PRECISION = 5; // meters
 const int STOP_SPEED = 255; 
 
 // Nominal speed of the robot (0 - 255)
-unsigned int MOTOR_SPEED = 255;
+unsigned int MOTOR_SPEED = 3 * SPEED_PARTITION;
 
 // Bluetooth command list
 enum Command
@@ -47,12 +54,9 @@ enum Command
   STOP,
   TURN_LEFT,
   TURN_RIGHT,
-  FORWARD,
-  BACKWARD,
-  DESTINATION_ACCOUNTING, // same as Location 1
-  DESTINATION_CAFE, // same as Location 2
-  DESTINATION_LIBRARY, // same as Location 3
-  DESTINATION_HOME // same as Location 0
+  SPEED_UP,
+  SPEED_DOWN,
+  RUN_BUZZER,
 }; // Don't change it unless you know what your doing
 
 // Directions list
