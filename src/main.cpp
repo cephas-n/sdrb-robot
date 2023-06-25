@@ -1006,7 +1006,7 @@ void setup()
 
   // 11.b calculate path
   calculate_waypoints(final_destinations);
-  calculate_path(2);
+  calculate_path(0);
   Serial.print("Path: ");
 
   // 11.c path calculation done indicator

@@ -19,7 +19,7 @@ const unsigned STEERING_DURATION = 1500;
 const unsigned OBSTACLE_STEERING_SPEED = 255;
 
 // The steering speed  of the robot (0 -> 255) during the normal operation mode
-const unsigned NAVIGATION_STEERING_SPEED = 200;
+const unsigned NAVIGATION_STEERING_SPEED = 255;
 
 // Time interval (in milliseconds) in which the robot will move forward, then stops
 const int FORWARD_DURATION = 500; // Do not change it
@@ -31,7 +31,7 @@ const int DIRECTION_CORRECTION = 15;
 const int GPS_LATITUDE_CORRECTION = 0; // Not used
 
 // Destination distance precision from current position of the robot (degrees)
-const double DESTINATION_DIST_PRECISION = 2; // meters
+const double DESTINATION_DIST_PRECISION = 5; // meters
 
 // The speed at which the robot will stop
 const int STOP_SPEED = 255; 
