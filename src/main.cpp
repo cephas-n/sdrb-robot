@@ -829,7 +829,6 @@ bool obstacle_avoidance()
 // const int NUM_OF_DESTINATIONS = 4;
 
 Path waypoints[NUM_OF_DESTINATIONS][NUM_OF_DESTINATIONS];
-const Path *waypoints_ptr[NUM_OF_DESTINATIONS][NUM_OF_DESTINATIONS];
 void calculate_waypoints(const double locations[NUM_OF_DESTINATIONS][2]) {
     for(int i = 0; i < 4; i++) {
         for(int j = 0; j < 4; j++) {
@@ -857,12 +856,11 @@ void calculate_path(int starting_point) {
 
     // Serial.println(vertex.size());
     // store minimum weight Hamiltonian Cycle.
-    int min_path = INT_MAX;
-    int last_min_path = min_path;
-    do {
-
+    double min_path = INT_MAX;
+    double last_min_path = INT_MAX;
+    while (next_permutation<VectorIterator<int>>(vertex.begin(), vertex.end())){
         // store current Path weight(cost)
-        int current_pathweight = 0;
+        double current_pathweight = 0;
         Path _current_path_storage[NUM_OF_DESTINATIONS];
         Vector<Path> current_path(_current_path_storage); 
 
@@ -880,7 +878,7 @@ void calculate_path(int starting_point) {
         // update minimum
         min_path = min(min_path, current_pathweight);
 
-        if(last_min_path != min_path) {
+        if(last_min_path > min_path) {
             for(size_t i = 0; i < 4; i++) {
                 paths.push_back(current_path[i]);
             }
@@ -888,7 +886,7 @@ void calculate_path(int starting_point) {
 
         last_min_path = min_path;
         
-    } while (next_permutation<VectorIterator<int>>(vertex.begin(), vertex.end()));
+    };
 
     path_cost = min_path;
 }
@@ -990,23 +988,9 @@ void setup()
   update_gps_position();
   
   // 11. CALCULATE PATH
-  /**
-   * 11.a 
-   * Copy locations and replace the home locations by the current location
-   * to make the calcullation of the path dynamic based on the current position
-   * of the robot
-   */
-  // double final_destinations[NUM_OF_DESTINATIONS][2];
-  // final_destinations[0][0] = gps.location.lat();
-  // final_destinations[0][1] = gps.location.lng();
-  // for(size_t i = 1; i < NUM_OF_DESTINATIONS; i++) {
-  //   final_destinations[i][0] = allDestinations[i][0];
-  //   final_destinations[i][1] = allDestinations[i][1];
-  // }
-
-  // 11.b calculate path
+  int start_position = 2; // the destination from which the robot will start (0 - 3)
   calculate_waypoints(allDestinations);
-  calculate_path(0);
+  calculate_path(start_position);
   Serial.print("Path: ");
 
   // 11.c path calculation done indicator
@@ -1024,9 +1008,9 @@ void setup()
   // 11.c print out path
   Serial.print("Path: ");
   for(auto &path: paths) {
-    Serial.print(String(path.start()) + " -> ");
+    Serial.print(String(path.end()));
   }
-  Serial.println();
+  Serial.println("Path cost: " + String(path_cost));
 
   //OTHERS
   led_stop.turn_on();
@@ -1053,11 +1037,13 @@ void loop() {
 
   // Main
   for(auto &path: paths) {
-
     if(path.completed) continue;
 
     bool arrived = false;
     NavigationEntry::destination = path.end();
+    NavigationEntry::distance = path.getDistance();
+    current_destination[0] = allDestinations[path.end()][0];
+    current_destination[1] = allDestinations[path.start()][1];
 
     while (!arrived)
     {
@@ -1066,21 +1052,35 @@ void loop() {
     }
     
     path.completed = true;
+    motor_controller->stop();
     save_navigation_data();
 
     // indicator
     run_buzzer(500);
     run_buzzer(500);
     run_buzzer(500);
+
+    // wait 5seconds
     delay(5000);
   }
 
   Serial.println("Mission Finished!!!!!!!!!!!!!!!!");
 }
 
+unsigned long last_location_update = 0;
+
 int run_robot(Path &path) {
+
   // 0. LOGGER
   logger();
+
+  // 0. UPDATE LOCATION AFTER 30 sec
+  update_gps_position();
+  NavigationEntry::distance = get_distance_from_destination();
+  // if(last_location_update - millis() > 30000) {
+  //   update_gps_position();
+  //   last_location_update = millis();
+  // }
 
   // 0.1 CHECK IF ARRIVED AT DESTINATION
   // if(State::arrived) {

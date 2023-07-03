@@ -20,9 +20,9 @@ class Motor {
       const uint8_t en_pin) = 0;
 
     Motor *forward() {
-      this->state = HIGH;
-      digitalWrite(this->positive_pin, HIGH);
-      digitalWrite(this->negative_pin, LOW);
+      // this->state = HIGH;
+      // digitalWrite(this->positive_pin, HIGH);
+      // digitalWrite(this->negative_pin, LOW);
 
       return this;
     }

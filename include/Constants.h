@@ -31,7 +31,7 @@ const int DIRECTION_CORRECTION = 15;
 const int GPS_LATITUDE_CORRECTION = 0; // Not used
 
 // Destination distance precision from current position of the robot (degrees)
-const double DESTINATION_DIST_PRECISION = 5; // meters
+const double DESTINATION_DIST_PRECISION = 10; // meters
 
 // The speed at which the robot will stop
 const int STOP_SPEED = 255; 
