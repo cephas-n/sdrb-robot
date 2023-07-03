@@ -187,11 +187,11 @@ class MotorController {
 
 
     void stop() {
-      // for(int speed = MOTOR_SPEED; speed > 100; speed--) {
-      //   driver_left->set_speed(speed);
-      //   driver_right->set_speed(speed);
-      //   delay(2);
-      // }
+      for(int speed = MOTOR_SPEED; speed > 100; speed--) {
+        driver_left->set_speed(speed);
+        driver_right->set_speed(speed);
+        delay(2);
+      }
 
       driver_left->stop();
       driver_right->stop();

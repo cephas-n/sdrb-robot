@@ -20,7 +20,7 @@ const unsigned int NUM_OF_SPEED_PARTITIONS = 4;
 const unsigned STEERING_DURATION = 1500;
 
 // The steering speed  of the robot (0 -> 255) during obstacle avoidance
-const unsigned OBSTACLE_STEERING_SPEED = 2 * SPEED_PARTITION;
+const unsigned OBSTACLE_STEERING_SPEED = 255;
 
 // The steering speed  of the robot (0 -> 255) during the normal operation mode
 const unsigned NAVIGATION_STEERING_SPEED = 255;
@@ -54,6 +54,7 @@ enum Command
   STOP,
   TURN_LEFT,
   TURN_RIGHT,
+  FULL_TURN,
   SPEED_UP,
   SPEED_DOWN,
   RUN_BUZZER,

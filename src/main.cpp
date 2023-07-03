@@ -151,8 +151,8 @@ void stop_all_motors()
 {
   led_left.turn_off();
   led_right.turn_off();
-
-  motor_controller->stop();
+  motor_controller->set_speed(100)->stop();
+  motor_controller->reverse()->stop();
 }
 
 
@@ -200,6 +200,8 @@ Command bluetooth_command()
     return SPEED_DOWN;
   case '6':
     return RUN_BUZZER;
+  case '7':
+    return FULL_TURN;
   default:
     //invalid or no command
     return VOID;
@@ -286,7 +288,7 @@ bool obstacle_avoidance()
   switch(choose_side()) {
     case RIGHT:
       // step 1: turn toward direction
-      turn_right(MOTOR_SPEED, STEERING_DURATION);
+      turn_right(OBSTACLE_STEERING_SPEED, STEERING_DURATION);
 
       // setp 2: Move forward until the left side if free 
       while (true) {
@@ -303,7 +305,7 @@ bool obstacle_avoidance()
       stop_all_motors();
 
       // step 3: turn left
-      turn_left(MOTOR_SPEED, STEERING_DURATION);
+      turn_left(OBSTACLE_STEERING_SPEED, STEERING_DURATION);
       // check if there is an obstacle in front
       if(front_ir.check()) {
         stop_all_motors();
@@ -325,7 +327,7 @@ bool obstacle_avoidance()
       stop_all_motors();
 
       // step 5: return to  the original path accross the obstacle
-      turn_left(MOTOR_SPEED, STEERING_DURATION);
+      turn_left(OBSTACLE_STEERING_SPEED, STEERING_DURATION);
       while (Avoidance::duration > 0) {
         // check if there is an obstacle in front
         if(front_ir.check()) {
@@ -337,11 +339,11 @@ bool obstacle_avoidance()
         Avoidance::duration--;
       }
       stop_all_motors();
-      turn_right(MOTOR_SPEED, STEERING_DURATION);
+      turn_right(OBSTACLE_STEERING_SPEED, STEERING_DURATION);
   
     case LEFT:
       // step 1: turn toward direction
-      turn_left(MOTOR_SPEED, STEERING_DURATION);
+      turn_left(OBSTACLE_STEERING_SPEED, STEERING_DURATION);
 
       // setp 2: Move forward until the right side is free 
       while (true) {
@@ -358,7 +360,7 @@ bool obstacle_avoidance()
       stop_all_motors();
 
       // step 3: turn right
-      turn_right(MOTOR_SPEED, STEERING_DURATION);
+      turn_right(OBSTACLE_STEERING_SPEED, STEERING_DURATION);
       // check if there is an obstacle in front
       if(front_ir.check()) {
         stop_all_motors();
@@ -380,7 +382,7 @@ bool obstacle_avoidance()
       stop_all_motors();
 
       // step 5: return to  the original path accross the obstacle
-      turn_right(MOTOR_SPEED, STEERING_DURATION);
+      turn_right(OBSTACLE_STEERING_SPEED, STEERING_DURATION);
       while (Avoidance::duration > 0) {
         // check if there is an obstacle in front
         if(front_ir.check()) {
@@ -391,8 +393,8 @@ bool obstacle_avoidance()
         forward(120);
         Avoidance::duration--;
       }
-      stop_all_motors();
-      turn_left(MOTOR_SPEED, STEERING_DURATION);
+      stop_all_motors();      
+      turn_left(OBSTACLE_STEERING_SPEED, STEERING_DURATION);
       break;
 
     default:
@@ -519,6 +521,11 @@ void loop() {
           break;
         case RUN_BUZZER:
           run_buzzer(200);
+          break;
+        case FULL_TURN:
+          stop_all_motors();
+          delay(2000);
+          turn_right(NAVIGATION_STEERING_SPEED, 5000);
           break;
         default:
           Serial.println("Searching direction ...");
