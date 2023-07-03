@@ -996,16 +996,16 @@ void setup()
    * to make the calcullation of the path dynamic based on the current position
    * of the robot
    */
-  double final_destinations[NUM_OF_DESTINATIONS][2];
-  final_destinations[0][0] = gps.location.lat();
-  final_destinations[0][1] = gps.location.lng();
-  for(size_t i = 1; i < NUM_OF_DESTINATIONS; i++) {
-    final_destinations[i][0] = allDestinations[i][0];
-    final_destinations[i][1] = allDestinations[i][1];
-  }
+  // double final_destinations[NUM_OF_DESTINATIONS][2];
+  // final_destinations[0][0] = gps.location.lat();
+  // final_destinations[0][1] = gps.location.lng();
+  // for(size_t i = 1; i < NUM_OF_DESTINATIONS; i++) {
+  //   final_destinations[i][0] = allDestinations[i][0];
+  //   final_destinations[i][1] = allDestinations[i][1];
+  // }
 
   // 11.b calculate path
-  calculate_waypoints(final_destinations);
+  calculate_waypoints(allDestinations);
   calculate_path(0);
   Serial.print("Path: ");
 
