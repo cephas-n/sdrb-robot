@@ -30,4 +30,7 @@
     bool obstacle_avoidance();
     void logger();
     int run_robot(Path &);
+    double get_gps_distance(double, double, double, double);
+    void calculate_waypoints(const double locations[NUM_OF_DESTINATIONS][2]);
+    void calculate_path(int starting_point);
 #endif

@@ -12,10 +12,10 @@
 #define _LOCATIONS_H_
 
 const double allDestinations[4][2] {
-    {35.189442100721685, 33.35875282319103}, // HOME
-    {35.18908767514828, 33.35923927020034}, // location 1
-    {35.188874669962544, 33.3590850139744}, // location 2
-    {35.188562850784194, 33.359859072164454},  // location 3
+    {35.1896057948247, 33.36170125562772}, // HOME
+    {35.18953841962514, 33.36021290671352}, // location 1
+    {35.18949230865301, 33.35948605869692}, // location 2
+    {35.18946130019338, 33.358779607288376},  // location 3
 };
 
 
@@ -27,5 +27,15 @@ const double allDestinations[4][2] {
  */
 double final_destinations[NUM_OF_DESTINATIONS][2];
 
+/**
+ * Default destination (HOME)
+ * 
+ */
+int active_destination = 0;
+double current_destination[2]
+{
+  allDestinations[0][0],
+  allDestinations[0][1]
+};
 
 #endif

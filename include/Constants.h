@@ -49,10 +49,10 @@ enum Command
   TURN_RIGHT,
   FORWARD,
   BACKWARD,
-  DESTINATION_ACCOUNTING, // same as Location 1
-  DESTINATION_CAFE, // same as Location 2
-  DESTINATION_LIBRARY, // same as Location 3
-  DESTINATION_HOME // same as Location 0
+  LOCATION_1, // same as Location 1
+  LOCATION_2, // same as Location 2
+  LOCATION_3, // same as Location 3
+  LOCATION_HOME // same as Location 0
 }; // Don't change it unless you know what your doing
 
 // Directions list

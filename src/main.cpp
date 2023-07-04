@@ -72,18 +72,6 @@ Cephas Naweji, Abel Tshimbu, Eliane Nsenga, Caleb Bahaya, Sarah Musinde, Mohamme
 // SDRB Library
 #include <SDRB.h>
 
-// TSP *tsp = new TSP();
-//########### DESTINATION ##############
-int active_destination = 0;
-bool destination_is_set = false;
-double current_destination[2]  // default: HOME
-{
-  allDestinations[0][0],
-  allDestinations[0][1]
-};
-//########### END DESTINATION ##############
-
-
 //########### COMMUNICATION ##############
 SoftwareSerial gps_serial(Pin::GPS_TX, Pin::GPS_RX);
 //########### END COMMUNICATION ##############
@@ -116,6 +104,84 @@ int path_cost = 0;
  *****************************************************************************
  *****************************************************************************/
 
+// TSP ALGORITHM
+Path waypoints[NUM_OF_DESTINATIONS][NUM_OF_DESTINATIONS];
+void calculate_waypoints(const double locations[NUM_OF_DESTINATIONS][2]) {
+    for(int i = 0; i < 4; i++) {
+        for(int j = 0; j < 4; j++) {
+            const double distance = get_gps_distance(
+                locations[i][0],
+                locations[i][1],
+                locations[j][0],
+                locations[j][1]
+            );
+            waypoints[i][j] = Path(i, j, distance);
+            Serial.println("Distance " + String(i) + " - " + String(j) + " : " + String(waypoints[i][j].getDistance()));
+        }
+    } 
+}
+
+void calculate_path(int starting_point) {
+    // reset paths
+    paths.clear();
+
+    // store all vertex apart from source vertex
+    int _vertex_storage[NUM_OF_DESTINATIONS];
+    Vector<int> vertex(_vertex_storage);
+    for (int i = 0; i < NUM_OF_DESTINATIONS; i++) {
+        if (i != starting_point) {
+            vertex.push_back(i);
+        }
+    }
+
+    // store minimum weight Hamiltonian Cycle.
+    double min_path = INT_MAX;
+    double last_min_path = INT_MAX;
+    while (next_permutation<VectorIterator<int>>(vertex.begin(), vertex.end())){
+        // store current Path weight(cost)
+        double current_pathweight = 0;
+        Path _current_path_storage[NUM_OF_DESTINATIONS];
+        Vector<Path> current_path(_current_path_storage); 
+
+
+        // compute current path weight
+        int k = starting_point;
+        for (size_t i = 0; i < vertex.size(); i++) {
+            current_pathweight += waypoints[k][vertex[i]].getDistance();
+            current_path.push_back(waypoints[k][vertex[i]]);
+            k = vertex[i];
+        }
+        current_pathweight += waypoints[k][starting_point].getDistance();
+        current_path.push_back(waypoints[k][starting_point]);
+
+        // update minimum
+        min_path = min(min_path, current_pathweight);
+
+        if(last_min_path > min_path) {
+            for(size_t i = 0; i < 4; i++) {
+                paths.push_back(current_path[i]);
+            }
+        }
+
+        last_min_path = min_path;
+        
+    };
+
+    path_cost = min_path;
+}
+
+/**
+ * Set Location
+ * 
+ * this function set the destination lat and lbg the robot should go to.
+ * 
+ */
+//########### DESTINATION ##############
+void set_destination(Path &path) {
+  active_destination = path.end();
+  current_destination[0] = allDestinations[active_destination][0];
+  current_destination[1] = allDestinations[active_destination][1];
+}
 
  /*
    Turns all the motor in forward direction
@@ -231,21 +297,20 @@ Command bluetooth_command()
     MOTOR_SPEED = MOTOR_SPEED > 20 ? MOTOR_SPEED - 10 : 5;
     break;
   case '3':
-    // location: accounting
-    active_destination = 1;
-    return DESTINATION_ACCOUNTING;
+    // location
+    calculate_path(1);
+    return LOCATION_1;
   case '4':
-    // location: accounting
-    active_destination = 2;
-    return DESTINATION_CAFE;
+    // location
+    calculate_path(2);
+    return LOCATION_2;
   case '5':
-    // location: accounting
-    active_destination = 3;
-    return DESTINATION_LIBRARY;
+    // location
+    calculate_path(3);
+    return LOCATION_3;
   case '6':
-    // location: accounting
-    active_destination = 0;
-    return DESTINATION_HOME;
+    calculate_path(0);
+    return LOCATION_HOME;
   default:
     //invalid or no command
     return VOID;
@@ -300,19 +365,19 @@ void turn_off_robot()
    of the robot
 */
 bool gps_location_found = false;
-// void update_gps_position()
-// {
-//   while (gps_serial.available() > 0)
-//   {
-//     gps.encode(gps_serial.read());
-//   }
+void update_gps_position()
+{
+  while (gps_serial.available() > 0)
+  {
+    gps.encode(gps_serial.read());
+  }
 
-//   if (gps.location.isUpdated())
-//   {
-//     gps_location_found = true;
-//     NavigationEntry::hasStarted = true;
-//   }
-// }
+  if (gps.location.isUpdated())
+  {
+    gps_location_found = true;
+    NavigationEntry::hasStarted = true;
+  }
+}
 
 double get_distance_from_destination() {
   if (!gps_location_found) return 0;
@@ -334,26 +399,6 @@ double get_course_to_destination() {
     current_destination[0], 
     current_destination[1]
   );
-}
-
-/*
-   Get position
-
-   this function return the latitude of the current position
-   of the robot
-*/
-void update_gps_position()
-{
-  while (gps_serial.available() > 0)
-  {
-    gps.encode(gps_serial.read());
-  }
-
-  if (gps.location.isUpdated())
-  {
-    gps_location_found = true;
-    NavigationEntry::hasStarted = true;
-  }
 }
 
 double get_gps_distance(
@@ -417,7 +462,7 @@ Direction navigation(const double destination_lat, const double destination_lng)
     NavigationEntry::distance = get_distance_from_destination();
     if (gps_location_found && NavigationEntry::distance <= DESTINATION_DIST_PRECISION)
     {
-      Serial.println("=======THE ROBOT HAS ARRIVED AT DESTIONATION " + String(active_destination) + "======");
+      Serial.println("=======THE ROBOT HAS ARRIVED AT DESTINATION " + String(active_destination) + "======");
       State::robot = LOW;
       State::arrived = true;
       NavigationEntry::arrived = true;
@@ -825,74 +870,6 @@ bool obstacle_avoidance()
 }
 
 
-// TSP ALGORITHM
-// const int NUM_OF_DESTINATIONS = 4;
-
-Path waypoints[NUM_OF_DESTINATIONS][NUM_OF_DESTINATIONS];
-void calculate_waypoints(const double locations[NUM_OF_DESTINATIONS][2]) {
-    for(int i = 0; i < 4; i++) {
-        for(int j = 0; j < 4; j++) {
-            const double distance = get_gps_distance(
-                locations[i][0],
-                locations[i][1],
-                locations[j][0],
-                locations[j][1]
-            );
-            waypoints[i][j] = Path(i, j, distance);
-            Serial.println("Distance " + String(i) + " - " + String(j) + " : " + String(waypoints[i][j].getDistance()));
-        }
-    } 
-}
-
-void calculate_path(int starting_point) {
-    // store all vertex apart from source vertex
-    int _vertex_storage[NUM_OF_DESTINATIONS];
-    Vector<int> vertex(_vertex_storage);
-    for (int i = 0; i < NUM_OF_DESTINATIONS; i++) {
-        if (i != starting_point) {
-            vertex.push_back(i);
-        }
-    }
-
-    // Serial.println(vertex.size());
-    // store minimum weight Hamiltonian Cycle.
-    double min_path = INT_MAX;
-    double last_min_path = INT_MAX;
-    while (next_permutation<VectorIterator<int>>(vertex.begin(), vertex.end())){
-        // store current Path weight(cost)
-        double current_pathweight = 0;
-        Path _current_path_storage[NUM_OF_DESTINATIONS];
-        Vector<Path> current_path(_current_path_storage); 
-
-
-        // compute current path weight
-        int k = starting_point;
-        for (size_t i = 0; i < vertex.size(); i++) {
-            current_pathweight += waypoints[k][vertex[i]].getDistance();
-            current_path.push_back(waypoints[k][vertex[i]]);
-            k = vertex[i];
-        }
-        current_pathweight += waypoints[k][starting_point].getDistance();
-        current_path.push_back(waypoints[k][starting_point]);
-
-        // update minimum
-        min_path = min(min_path, current_pathweight);
-
-        if(last_min_path > min_path) {
-            for(size_t i = 0; i < 4; i++) {
-                paths.push_back(current_path[i]);
-            }
-        }
-
-        last_min_path = min_path;
-        
-    };
-
-    path_cost = min_path;
-}
-
-
-
 void logger() {
   // every 5 seconds
   static uint32_t last_update = millis();
@@ -907,7 +884,7 @@ void logger() {
     Serial.println("RIGHT IR: " + String(right_ir.check() ? "detected" : "-"));
 
     // Navigation
-    Serial.println("DISTINATION: id = " + String(active_destination + 1)
+    Serial.println("DISTINATION: id = " + String(active_destination)
                   + ", lat=" + String(current_destination[0], 6) 
                   + ",  lng=" + String(current_destination[1], 6)
                   + ",  heading=" + String(get_course_to_destination(), 2));
@@ -987,13 +964,13 @@ void setup()
   delay(2000);
   update_gps_position();
   
-  // 11. CALCULATE PATH
-  int start_position = 2; // the destination from which the robot will start (0 - 3)
+  // 11.a CALCULATE PATH
+  int start_position = 0; // the destination from which the robot will start (0 - 3)
   calculate_waypoints(allDestinations);
   calculate_path(start_position);
   Serial.print("Path: ");
 
-  // 11.c path calculation done indicator
+  // 11.b path calculation done indicator
   if(paths.size() > 0) {
     for(size_t i = 0; i < 3; i++) {
       led_left.turn_on();
@@ -1006,9 +983,10 @@ void setup()
   }
 
   // 11.c print out path
+  Serial.println("# of paths:" + String(paths.size()));
   Serial.print("Path: ");
   for(auto &path: paths) {
-    Serial.print(String(path.end()));
+    Serial.print(String(path.end()) + " - ");
   }
   Serial.println("Path cost: " + String(path_cost));
 
@@ -1037,23 +1015,23 @@ void loop() {
 
   // Main
   for(auto &path: paths) {
+    set_destination(path);
+
     if(path.completed) continue;
 
-    bool arrived = false;
-    NavigationEntry::destination = path.end();
-    NavigationEntry::distance = path.getDistance();
-    current_destination[0] = allDestinations[path.end()][0];
-    current_destination[1] = allDestinations[path.start()][1];
+    State::arrived = false;
 
-    while (!arrived)
+    while (!State::arrived)
     {
-      arrived = run_robot(path);
+      run_robot(path);
       Serial.println("Moving from: " + String(path.start()) + " to: " + String(path.end()) + ", distance: " + String(path.getDistance()));
     }
     
     path.completed = true;
-    motor_controller->stop();
     save_navigation_data();
+
+    stop_robot();
+    State::robot = HIGH;
 
     // indicator
     run_buzzer(500);
@@ -1064,6 +1042,7 @@ void loop() {
     delay(5000);
   }
 
+  stop_robot();
   Serial.println("Mission Finished!!!!!!!!!!!!!!!!");
 }
 
@@ -1073,19 +1052,6 @@ int run_robot(Path &path) {
 
   // 0. LOGGER
   logger();
-
-  // 0. UPDATE LOCATION AFTER 30 sec
-  update_gps_position();
-  NavigationEntry::distance = get_distance_from_destination();
-  // if(last_location_update - millis() > 30000) {
-  //   update_gps_position();
-  //   last_location_update = millis();
-  // }
-
-  // 0.1 CHECK IF ARRIVED AT DESTINATION
-  // if(State::arrived) {
-  //   return 1;
-  // }
 
   // 1. BLUETOOTH COMMAND
   if (Serial.available() > 0)
@@ -1102,15 +1068,6 @@ int run_robot(Path &path) {
         break;
       case STOP:
         stop_robot();
-        break;
-      case DESTINATION_ACCOUNTING:
-      case DESTINATION_CAFE:
-      case DESTINATION_LIBRARY:
-      case DESTINATION_HOME:
-        current_destination[0] = allDestinations[active_destination][0];
-        current_destination[1] = allDestinations[active_destination][1];
-        destination_is_set = true;
-        run_buzzer(100);
         break;
       default:
         Serial.println("Unknown command!");
@@ -1144,8 +1101,8 @@ int run_robot(Path &path) {
     {
       //3.1.  AUTONOMOUS NAVIGATION
       const Direction direction = navigation(
-        allDestinations[path.end()][0], 
-        allDestinations[path.end()][1]
+        current_destination[0], 
+        current_destination[1]
       );
       switch (direction)
       {
